@@ -1,0 +1,144 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Nav from '../../components/Nav.astro';
+import Footer from '../../components/Footer.astro';
+import Breadcrumbs from '../../components/Breadcrumbs.astro';
+
+const STAGING = 'https://wordpress-1301750-6506622.cloudwaysapps.com';
+
+export async function getStaticPaths() {
+  const endpoint = import.meta.env.WP_GRAPHQL_URL;
+  if (!endpoint) { console.warn('[wp] WP_GRAPHQL_URL is not set'); return []; }
+
+  const STAGING = 'https://wordpress-1301750-6506622.cloudwaysapps.com';
+  const MEDIA = (import.meta.env.WP_MEDIA_URL || STAGING).replace(/\/$/, '');
+  const mediaUrl = (u) => (u ? u.replaceAll(STAGING, MEDIA) : u);
+
+  const REVIEW_FIELDS = `title slug uri date modified content
+    featuredImage { node { sourceUrl altText } }
+    reviewFields {
+      rating
+      promoHeadline
+      promoDescription
+    }`;
+
+  // Pull all categories, each with its posts (paginated).
+  async function fetchCategories() {
+    const cats = [];
+    let after = null;
+    for (let i = 0; i < 50; i++) {
+      const query = `query($after: String) {
+        categories(first: 50, after: $after) {
+            pageInfo { hasNextPage endCursor }
+            nodes {
+            name slug uri count
+            posts(first: 100) {
+                nodes { title uri slug date }
+            }
+            }
+        }
+      }`;
+      let json;
+      try {
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query, variables: { after } }),
+        });
+        json = await res.json();
+      } catch (e) { console.error('[wp] category network error:', e); break; }
+      if (json.errors) { console.error('[wp] category GraphQL errors:', JSON.stringify(json.errors, null, 2)); break; }
+      const conn = json.data?.categories;
+      if (!conn) break;
+      cats.push(...(conn.nodes ?? []));
+      if (!conn.pageInfo?.hasNextPage) break;
+      after = conn.pageInfo.endCursor;
+    }
+    return cats;
+  }
+
+  const cats = await fetchCategories();
+  console.log('[wp] fetched categories:', cats.length);
+
+  const clean = (uri, slug) => (uri || `/category/${slug}/`).replace(/^\/+|\/+$/g, '').replace(/^category\//, '');
+
+  const paths = [];
+  for (const cat of cats) {
+    const slug = clean(cat.uri, cat.slug);
+    if (!slug) continue;
+    const posts = (cat.posts?.nodes ?? []).map((p) => ({
+      title: p.title,
+      href: '/' + (p.uri || `/${p.slug}/`).replace(/^\/+|\/+$/g, '') + '/',
+      img: mediaUrl(p.featuredImage?.node?.sourceUrl ?? null),
+      alt: p.featuredImage?.node?.altText ?? p.title,
+      cat: p.categories?.nodes?.[0]?.name ?? cat.name,
+      author: p.author?.node?.name ?? null,
+      avatar: mediaUrl(p.author?.node?.avatar?.url ?? null),
+    }));
+    paths.push({ params: { slug }, props: { name: cat.name, count: cat.count ?? posts.length, posts } });
+  }
+  return paths;
+}
+
+const { name, count, posts } = Astro.props;
+const canonical = new URL(Astro.url.pathname, Astro.site).toString();
+---
+
+<Layout title={`${name} – US Player Check`} description={`Latest ${name} articles, news and guides from US Player Check.`}>
+  <Nav />
+<Breadcrumbs items={[ { label: 'Home', href: '/' }, { label: 'Categories' }, { label: name } ]} />
+  <header class="chero">
+    <div class="wrap">
+      <span class="chero__ey">Category</span>
+      <h1 class="chero__title">{name}</h1>
+      <p class="chero__count">{count} {count === 1 ? 'article' : 'articles'}</p>
+    </div>
+  </header>
+
+  <section class="wrap clist">
+    {posts.length === 0 ? (
+      <p class="clist__empty">No articles in this category yet.</p>
+    ) : (
+      <div class="space-news-3-items">
+        {posts.map((p) => (
+          <div class="space-news-3-item">
+            <div class="space-news-3-item-ins">
+              <a href={p.href} class="space-news-3-item-img">
+                <div class="space-news-3-item-img-ins">
+                  {p.img && <img src={p.img} alt={p.alt} loading="lazy" />}
+                </div>
+              </a>
+              <div class="space-news-3-item-title-box">
+                {p.cat && <div class="space-news-3-item-img-category"><span>{p.cat}</span></div>}
+                <div class="space-news-3-item-title"><a href={p.href}>{p.title}</a></div>
+                <div class="space-news-3-item-meta">
+                  {p.author && (
+                    <span class="cby">
+                      {p.avatar && <img src={p.avatar} alt={p.author} width="22" height="22" />}
+                      {p.author}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    )}
+  </section>
+
+  <Footer />
+</Layout>
+
+<style>
+  .chero { background: aliceblue; border-bottom: 1px solid var(--line); padding-block: clamp(40px, 5vw, 64px); }
+  .chero__ey { font-size: 12px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--gold-deep); }
+  .chero__title { font-size: clamp(30px, 4.4vw, 50px); letter-spacing: -0.025em; color: var(--ink); margin-top: 8px; }
+  .chero__count { margin-top: 8px; font-size: 14px; color: var(--muted-2); }
+
+  .clist { padding-block: clamp(36px, 5vw, 56px); }
+  .clist__empty { text-align: center; color: var(--muted); font-size: 15px; padding: 40px 0; }
+
+  .cby { display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; color: var(--muted-2); font-weight: 600; }
+  .cby img { border-radius: 50%; object-fit: cover; }
+</style>

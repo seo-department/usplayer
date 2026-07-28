@@ -1,0 +1,12 @@
+{
+  "rewrites": [
+    {
+      "source": "/wp-content/:path*",
+      "destination": "https://wordpress-1301750-6506622.cloudwaysapps.com/wp-content/:path*"
+    },
+    {
+      "source": "/wp-includes/:path*",
+      "destination": "https://wordpress-1301750-6506622.cloudwaysapps.com/wp-includes/:path*"
+    }
+  ]
+}

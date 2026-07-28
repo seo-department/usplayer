@@ -1,0 +1,168 @@
+---
+const base = '';
+
+// Same staging→live rewrite used in [...slug].astro — without this,
+// featured image src values leak the raw Cloudways domain into rendered HTML.
+const STAGING = 'https://wordpress-1301750-6506622.cloudwaysapps.com';
+const MEDIA = (import.meta.env.WP_MEDIA_URL ?? STAGING).replace(/\/$/, '');
+const mediaUrl = (u) => (u ? u.replace(STAGING, MEDIA) : u);
+
+const query = `query LatestNews {
+  posts(first: 4, where: { orderby: { field: DATE, order: DESC } }) {
+    nodes { title excerpt date uri
+      categories(first: 1) { nodes { name } }
+      featuredImage { node { sourceUrl altText } } }
+  }
+}`;
+
+// Shown if WordPress is unreachable at build time so the section never breaks
+const fallbackFeatured = {
+  cat: 'Regulation', date: 'Jun 14, 2026',
+  title: 'Three more states move toward legal online casinos in 2026',
+  excerpt: 'Bills in two Midwestern states and one on the East Coast cleared committee this week, setting up votes that could expand regulated real-money play to millions more players before year-end.',
+  img: null, alt: '', href: `${base}/news/`, read: '6 min',
+};
+const fallbackItems = [
+  { cat: 'Payouts', date: 'Jun 9, 2026',  title: 'How fast are crypto withdrawals really? We timed 20 casinos', img: null, alt: '', href: `${base}/news/`, read: '5 min' },
+  { cat: 'Bonuses', date: 'Jun 3, 2026',  title: 'No-deposit bonuses are shrinking — here’s what replaced them', img: null, alt: '', href: `${base}/news/`, read: '4 min' },
+  { cat: 'Games',   date: 'May 28, 2026', title: 'Live dealer studios add new game shows for US players',        img: null, alt: '', href: `${base}/news/`, read: '3 min' },
+];
+
+let featured = fallbackFeatured;
+let items = fallbackItems;
+
+const endpoint = import.meta.env.WP_GRAPHQL_URL;
+if (endpoint) {
+  try {
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query }),
+    });
+    const nodes = (await res.json())?.data?.posts?.nodes ?? [];
+    if (nodes.length) {
+      const strip = (h) => (h ?? '').replace(/<[^>]+>/g, '').trim();
+      const fmt = (n) => {
+        const text = strip(n.excerpt);
+        const words = text.split(/\s+/).filter(Boolean).length;
+        return {
+          cat: n.categories?.nodes?.[0]?.name ?? 'News',
+          date: new Date(n.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+          title: n.title,
+          excerpt: text,
+          img: mediaUrl(n.featuredImage?.node?.sourceUrl ?? null),
+          alt: n.featuredImage?.node?.altText ?? n.title,
+          href: `${base}${n.uri}`,
+          read: `${Math.max(1, Math.ceil(words / 200))} min`,
+        };
+      };
+      featured = fmt(nodes[0]);
+      items = nodes.slice(1).map(fmt);
+    }
+  } catch (e) {
+    /* keep fallback content */
+  }
+}
+---
+
+<section class="news section" id="news">
+  <div class="wrap">
+    <header class="news__head">
+      <div>
+        <span class="eyebrow">From the newsroom</span>
+        <h2 class="news__title">Latest news</h2>
+      </div>
+      <a class="news__all" href={`${base}/news/`}>View all news
+        <svg viewBox="0 0 18 18" width="16" height="16" aria-hidden="true"><path d="M3 9h11M10 4.5L14.5 9 10 13.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </a>
+    </header>
+
+    <div class="news__grid">
+      <a class="feat" href={featured.href}>
+        <div class="feat__media">
+          {featured.img && <img class="feat__img" src={featured.img} alt={featured.alt} loading="lazy" />}
+          <span class="feat__badge">{featured.cat}</span>
+        </div>
+        <div class="feat__body">
+          <div class="news__meta"><span>{featured.date}</span><span class="dot"></span><span>{featured.read}</span></div>
+          <h3 class="feat__title">{featured.title}</h3>
+          <p class="feat__excerpt">{featured.excerpt}</p>
+          <span class="news__readmore">Read article →</span>
+        </div>
+      </a>
+
+      <ul class="news__list">
+        {items.map((it) => (
+          <li>
+            <a class="nrow" href={it.href}>
+              {it.img && <img class="nrow__img" src={it.img} alt={it.alt} loading="lazy" />}
+              <div class="nrow__body">
+                <span class="nrow__cat">{it.cat}</span>
+                <h4 class="nrow__title">{it.title}</h4>
+                <span class="news__meta"><span>{it.date}</span><span class="dot"></span><span>{it.read}</span></span>
+              </div>
+            </a>
+          </li>
+        ))}
+      </ul>
+    </div>
+  </div>
+</section>
+
+<style>
+  .news__head { display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; flex-wrap: wrap; margin-bottom: 32px; }
+  .news__title { font-size: clamp(28px, 3.4vw, 42px); margin-top: 12px; }
+  .news__all {
+    display: inline-flex; align-items: center; gap: 7px;
+    font-family: var(--body); font-weight: 600; font-size: 14px; color: var(--emerald-2);
+  }
+  .news__all svg { transition: transform .18s ease; }
+  .news__all:hover { color: var(--emerald); }
+  .news__all:hover svg { transform: translateX(3px); }
+
+  .news__grid { display: grid; grid-template-columns: 1.25fr 1fr; gap: 18px; align-items: stretch; }
+
+  .news__meta { display: flex; align-items: center; gap: 9px; font-family: var(--body); font-size: 12.5px; color: var(--muted-2); }
+  .news__meta .dot { width: 3px; height: 3px; border-radius: 50%; background: var(--gold); }
+  .news__readmore { font-family: var(--body); font-weight: 600; font-size: 14px; color: var(--emerald-2); margin-top: 14px; display: inline-block; }
+
+  .feat {
+    display: flex; flex-direction: column;
+    background: var(--white); border: 1px solid var(--line); border-radius: var(--radius);
+    overflow: hidden; box-shadow: var(--shadow-sm);
+    transition: transform .2s ease, box-shadow .2s ease;
+  }
+  .feat:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); }
+  .feat__media {
+    position: relative; min-height: 180px;
+    background: radial-gradient(120% 140% at 0% 0%, var(--emerald-2), var(--emerald) 60%);
+  }
+  .feat__img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .feat__media::after {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background: repeating-linear-gradient(135deg, transparent 0 18px, rgba(228,203,134,.06) 18px 19px);
+  }
+  .feat__badge {
+    position: absolute; top: 16px; left: 16px; z-index: 2;
+    font-family: var(--body); font-size: 11px; font-weight: 700; letter-spacing: .05em;
+    color: var(--emerald); background: var(--gold-2); padding: 5px 11px; border-radius: 999px;
+  }
+  .feat__body { padding: 22px 24px 24px; }
+  .feat__title { font-size: 24px; color: var(--ink); margin-top: 10px; line-height: 1.15; }
+  .feat__excerpt { margin-top: 12px; font-size: 14.5px; color: var(--muted); line-height: 1.65; }
+
+  .news__list { list-style: none; padding: 0; margin: 0; display: grid; gap: 14px; }
+  .nrow {
+    display: flex; align-items: center; gap: 16px; height: 100%;
+    background: var(--white); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 16px 18px; box-shadow: var(--shadow-sm);
+    transition: transform .18s ease, box-shadow .2s ease, border-color .2s ease;
+  }
+  .nrow:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); border-color: var(--line-2); }
+  .nrow__img { flex: none; width: 84px; height: 84px; object-fit: cover; border-radius: 12px; }
+  .nrow__body { min-width: 0; }
+  .nrow__cat { font-family: var(--body); font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--gold-deep); }
+  .nrow__title { font-size: 17px; color: var(--ink); margin: 7px 0 10px; line-height: 1.25; }
+
+  @media (max-width: 880px) { .news__grid { grid-template-columns: 1fr; } }
+</style>

@@ -1,0 +1,225 @@
+---
+import '@fontsource/poppins';
+import '../styles/global.css';
+
+interface Props {
+  title?: string;
+  description?: string;
+  image?: string;
+  noindex?: boolean;
+}
+
+const {
+  title = 'US Player Check – Trusted Online Casino Reviews & Real Money Casino Guide',
+  description = 'US Player Check provides verified online casino reviews (based on real testing). We audit payout speeds, licensing, and safety to ensure secure real money play.',
+  image = '/og-default.png',
+  noindex = false,
+} = Astro.props;
+
+const canonicalURL = new URL(Astro.url.pathname, Astro.site);
+const ogImage = new URL(image, Astro.site);
+const siteUrl = Astro.site?.toString() ?? 'https://usplayercheck.com/';
+const mediaOrigin = import.meta.env.WP_MEDIA_URL; // used for preconnect below
+
+const robots = noindex
+  ? 'noindex, nofollow'
+  : 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1';
+
+const schema = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'Organization',
+      '@id': `${siteUrl}#org`,
+      name: 'US Player Check',
+      url: siteUrl,
+      logo: {
+        '@type': 'ImageObject',
+        url: new URL('/images/usplayercheck-red-and-white-logo.png', Astro.site).toString(),
+        width: 600, // 🚨 update to match actual logo dimensions
+        height: 60,
+      },
+      sameAs: [
+        'https://www.trustpilot.com/review/usplayercheck.com',
+        // 🚨 add real social profile URLs here if they exist (twitter, facebook, linkedin)
+      ],
+    },
+    {
+      '@type': 'WebSite',
+      '@id': `${siteUrl}#website`,
+      name: 'US Player Check',
+      url: siteUrl,
+      publisher: { '@id': `${siteUrl}#org` },
+      // 🚨 only keep this if a real /search page exists — remove otherwise
+      potentialAction: {
+        '@type': 'SearchAction',
+        target: `${siteUrl}search?q={search_term_string}`,
+        'query-input': 'required name=search_term_string',
+      },
+    },
+  ],
+};
+---
+
+<!doctype html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonicalURL} />
+    <meta name="generator" content={Astro.generator} />
+
+    <meta name="robots" content={robots} />
+    <meta property="og:locale" content="en_US" />
+
+    <link rel="alternate" hreflang="en-us" href={canonicalURL} />
+    <link rel="alternate" hreflang="x-default" href={canonicalURL} />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="US Player Check" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonicalURL} />
+    <meta property="og:image" content={ogImage} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content={title} />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@usplayercheck" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImage} />
+
+    <meta name="theme-color" content="#1F2F6B" />
+    <link rel="icon" type="image/svg+xml" href="/usplayercheck_favicon.svg" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+
+    {mediaOrigin && <link rel="preconnect" href={mediaOrigin} crossorigin />}
+
+    <script type="application/ld+json" set:html={JSON.stringify(schema)} />
+  </head>
+  <body>
+    <slot />
+  </body>
+</html>
+
+<script>
+  (function () {
+  var triggers = document.querySelectorAll('.panel-group [data-toggle="collapse"]');
+  if (!triggers.length) return;
+
+  triggers.forEach(function (link) {
+    link.addEventListener('click', function (e) {
+      e.preventDefault();
+      var panel = document.querySelector(link.getAttribute('href'));
+      if (!panel) return;
+
+      var group = link.closest('.panel-group');           // scope to THIS accordion
+      var isOpen = panel.classList.contains('is-open');
+
+      group.querySelectorAll('[data-toggle="collapse"]').forEach(function (t) {
+        var p = document.querySelector(t.getAttribute('href'));
+        if (!p) return;
+        p.classList.remove('is-open');
+        p.style.maxHeight = null;
+        p.style.removeProperty('height');
+        t.setAttribute('aria-expanded', 'false');
+        t.classList.add('collapsed');
+      });
+
+      if (!isOpen) {
+        panel.classList.add('is-open');
+        panel.style.maxHeight = panel.scrollHeight + 'px';
+        link.setAttribute('aria-expanded', 'true');
+        link.classList.remove('collapsed');
+      }
+    });
+  });
+})();
+</script>
+
+<script is:inline>
+  function toggleContent(btn) {
+    var box = btn.closest('.disclaimer-cl')?.querySelector('.content1');
+    if (!box) return;
+    var open = box.classList.toggle('is-open');
+    btn.textContent = open ? ' Show less' : ' Show more';
+  }
+
+  document.addEventListener("DOMContentLoaded", function() {
+    // Select all the clickable accordion titles
+    const accordionTitles = document.querySelectorAll(".panel-title");
+
+    accordionTitles.forEach(title => {
+        title.addEventListener("click", function(event) {
+            // Prevent the browser from jumping to the top of the page
+            event.preventDefault(); 
+
+            // Find the ID of the content we want to open (e.g., "#collapse1")
+            const targetId = this.getAttribute("href");
+            const targetPanel = document.querySelector(targetId);
+
+            if (targetPanel) {
+                // Toggle the classes that our CSS uses to display the content
+                targetPanel.classList.toggle("show");
+                targetPanel.classList.toggle("in");
+
+                // Update the aria-expanded attribute for screen readers
+                const isExpanded = targetPanel.classList.contains("show");
+                this.setAttribute("aria-expanded", isExpanded);
+            }
+        });
+    });
+});
+
+
+(function () {
+    var PER_PAGE = 10;
+    document.querySelectorAll('.space-news-3-items').forEach(function (grid) {
+      var items = Array.prototype.slice.call(grid.querySelectorAll(':scope > .space-news-3-item'));
+      if (items.length <= PER_PAGE) return;
+
+      var pages = Math.ceil(items.length / PER_PAGE);
+      var cur = 1;
+
+      var nav = document.createElement('div');
+      nav.className = 'uspc-pagination';
+      grid.parentNode.insertBefore(nav, grid.nextSibling);
+
+      var prev = document.createElement('button');
+      prev.textContent = '‹ Prev';
+
+      var label = document.createElement('span');
+      label.className = 'uspc-page-label';
+
+      var next = document.createElement('button');
+      next.textContent = 'Next ›';
+
+      nav.appendChild(prev);
+      nav.appendChild(label);
+      nav.appendChild(next);
+
+      function show(page) {
+        cur = page;
+        items.forEach(function (el, i) {
+          el.style.display = (Math.floor(i / PER_PAGE) + 1) === page ? '' : 'none';
+        });
+        label.textContent = 'Page ' + page + ' of ' + pages;
+        prev.disabled = page === 1;
+        next.disabled = page === pages;
+        grid.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+
+      prev.onclick = function () { if (cur > 1) show(cur - 1); };
+      next.onclick = function () { if (cur < pages) show(cur + 1); };
+
+      show(1);
+    });
+  })();
+</script>

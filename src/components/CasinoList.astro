@@ -1,0 +1,333 @@
+---
+const casinos = [
+  { rank: 1, name: 'Lucky Red',       slug: 'https://goto.usplayercheck.com/lucky-red-casino.home',   review: '/casino-reviews/lucky-red-casino/',   logo: '/images/lucky-red-casino.png',         score: '9.7', tag: 'Best overall',     bonus: 'US$4,000 Bonus', extra: '+ US$75 free chip', payout: '< 24h',    licence: 'Curaçao', games: '300+' },
+  { rank: 2, name: 'Café Casino',     slug: 'https://goto.usplayercheck.com/cafe-casino.home',        review: '/casino-reviews/cafe-casino/',       logo: '/images/cafe-casino.png',              score: '9.4', tag: 'Biggest bonus',    bonus: 'US$5,500',       extra: 'Welcome bonus',     payout: '< 48h',    licence: 'Curaçao', games: '250+' },
+  { rank: 3, name: 'Ignition Casino', slug: 'https://goto.usplayercheck.com/ignition-casino.home',    review: '/casino-reviews/ignition-casino/',   logo: '/images/ignition-casino.png',          score: '9.1', tag: 'Best for poker',   bonus: 'US$1,000',       extra: 'Welcome bonus',     payout: '< 24h',    licence: 'Curaçao', games: '300+' },
+  { rank: 4, name: 'Bovada Casino',   slug: 'https://goto.usplayercheck.com/bovada-casino.home',      review: '/casino-reviews/bovada-casino/',     logo: '/images/bovada-casino-135x67.png',     score: '8.8', tag: 'Most trusted',     bonus: 'US$3,000',       extra: 'Welcome bonus',     payout: '< 24h',    licence: 'Curaçao', games: '200+' },
+  { rank: 5, name: 'Wild Casino',     slug: 'https://goto.usplayercheck.com/wild-casino.home',        review: '/casino-reviews/wild-casino/',       logo: '/images/wild-casino-us.png',           score: '8.5', tag: 'Best free spins',  bonus: '250 Free Spins', extra: 'On first deposit',  payout: '1–3 days', licence: 'Curaçao', games: '500+' },
+  { rank: 6, name: 'Raging Bull',     slug: 'https://goto.usplayercheck.com/ragingbullcasino.home',   review: '/casino-reviews/raging-bull-casino/', logo: '/images/raging-bull-casino-135x70.png', score: '8.3', tag: 'Best rewards',     bonus: 'US$2,500 Bonus', extra: '+ 50 free spins',   payout: '< 48h',    licence: 'Curaçao', games: '200+' },
+];
+
+const casinoSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'ItemList',
+  name: 'Best real-money online casinos in the US',
+  itemListElement: casinos.map((c, i) => ({
+    '@type': 'ListItem',
+    position: i + 1,
+    item: {
+      '@type': 'Review',
+      name: `${c.name} review`,
+      url: c.review,
+      itemReviewed: { '@type': 'Organization', name: c.name },
+      reviewRating: { '@type': 'Rating', ratingValue: c.score, bestRating: '10', worstRating: '1' },
+      author: { '@type': 'Organization', name: 'US Player Check' },
+    },
+  })),
+};
+---
+
+<section class="rankings section" id="casinos">
+  <script type="application/ld+json" set:html={JSON.stringify(casinoSchema)} />
+  <div class="wrap">
+    <header class="rankings__head">
+      <div>
+        <span class="eyebrow">June 2026 rankings</span>
+        <h2 class="rankings__title">The top-rated casinos right now</h2>
+      </div>
+      <p class="rankings__sub">
+        Ranked by our scored review of bonus value, payout speed, licensing and
+        game range. Re-verified every Monday.
+      </p>
+    </header>
+
+    <ol class="grid">
+      {
+        casinos.map(c => (
+          <li class={`cblock ${c.rank === 1 ? "is-top" : ""}`}>
+            {c.rank === 1 && (
+              <span class="cblock__ribbon">Most Popular</span>
+            )}
+            <div class="cblock__top">
+              <span class="cblock__rank">#{c.rank}</span>
+              <div class="score-chip">
+                <span>{c.score}</span>
+              </div>
+            </div>
+
+            <div class="cblock__brand">
+              <img
+                class="cblock__logo"
+                src={c.logo}
+                alt={`${c.name} logo`}
+                loading="lazy"
+              />
+              <div>
+                <h3 class="cblock__name">{c.name}</h3>
+                <span class="cblock__tag">{c.tag}</span>
+              </div>
+            </div>
+
+            <span class="cblock__stars" aria-hidden="true">
+              ★★★★★
+            </span>
+
+            <div class="cblock__bonus">
+              <span class="cblock__label">Welcome bonus</span>
+              <strong>{c.bonus}</strong>
+              <span class="cblock__extra">{c.extra}</span>
+            </div>
+
+            <dl class="cblock__meta">
+              <div>
+                <>
+                  <dt>Payout</dt>
+                  <dd>{c.payout}</dd>
+                </>
+              </div>
+              <div>
+                <>
+                  <dt>Licence</dt>
+                  <dd>{c.licence}</dd>
+                </>
+              </div>
+              <div>
+                <>
+                  <dt>Games</dt>
+                  <dd>{c.games}</dd>
+                </>
+              </div>
+            </dl>
+
+            <div class="cblock__act">
+  <a class="btn btn-gold" href={c.slug} rel="nofollow sponsored noopener" target="_blank">Visit casino</a>
+  <a class="cblock__review" href={c.review}>Read review →</a>
+</div>
+          </li>
+        ))
+      }
+    </ol>
+
+    <p class="rankings__foot">
+      US Player Check may earn a commission when you sign up through our links.
+      This never affects our scores or the order above. <a href="#"
+        >How we’re funded</a
+      >.
+    </p>
+  </div>
+</section>
+
+<style>
+  .rankings__head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 30px;
+    flex-wrap: wrap;
+    margin-bottom: 36px;
+  }
+  .rankings__title {
+    font-size: clamp(28px, 3.4vw, 42px);
+    margin-top: 14px;
+    max-width: 14ch;
+  }
+  .rankings__sub {
+    color: var(--muted);
+    max-width: 36ch;
+    font-size: 15px;
+  }
+
+  .grid {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+
+  .cblock {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    background: var(--white);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 22px 22px 20px;
+    box-shadow: var(--shadow-sm);
+    transition:
+      transform 0.2s ease,
+      box-shadow 0.2s ease,
+      border-color 0.2s ease;
+  }
+  .cblock:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-md);
+    border-color: var(--line-2);
+  }
+  .cblock.is-top {
+    border-color: var(--gold);
+    box-shadow:
+      0 0 0 1px var(--gold) inset,
+      var(--shadow-md);
+    background: linear-gradient(180deg, #fffdf7, var(--white));
+  }
+  .cblock__ribbon {
+    position: absolute;
+    top: -14px;
+    right: -1px;
+    background: linear-gradient(180deg, var(--gold-2), var(--gold));
+    color: #3a2c08;
+    font-family: var(--body);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    padding: 5px 12px 5px 14px;
+    border-radius: 999px 0 0 999px;
+    border: 1px solid var(--gold-deep);
+    border-right: 0;
+  }
+
+  .cblock__top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .cblock__rank {
+    font-family: var(--display);
+    font-size: 30px;
+    font-weight: 700;
+    color: var(--emerald);
+    line-height: 1;
+  }
+  .is-top .cblock__rank {
+    color: var(--gold-deep);
+  }
+
+  .cblock__brand {
+    display: flex;
+    align-items: center;
+    gap: 63px;
+    margin-top: 16px;
+  }
+  .cblock__logo {
+    height: 42px;
+    width: auto;
+    max-width: 104px;
+    object-fit: contain;
+    object-position: left center;
+    flex: 0 0 auto;
+  }
+  .cblock__name {
+    font-size: 20px;
+    color: var(--ink);
+  }
+  .cblock__tag {
+    font-size: 13px;
+    color: var(--emerald-2);
+    font-weight: 600;
+  }
+
+  .cblock__stars {
+    color: var(--gold);
+    letter-spacing: 2px;
+    font-size: 15px;
+    margin-top: 12px;
+  }
+
+  .cblock__bonus {
+    margin-top: 14px;
+    padding: 12px 14px;
+    background: var(--ivory-2);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    display: flex;
+    flex-direction: column;
+  }
+  .cblock__label {
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted-2);
+    font-family: var(--body);
+  }
+  .cblock__bonus strong {
+    font-family: var(--display);
+    font-size: 18px;
+    color: var(--ink);
+    margin-top: 2px;
+  }
+  .cblock__extra {
+    font-size: 12.5px;
+    color: var(--emerald-2);
+    font-weight: 600;
+  }
+
+  .cblock__meta {
+    display: flex;
+    gap: 18px;
+    margin: 16px 0 0;
+  }
+  .cblock__meta div {
+    display: flex;
+    flex-direction: column;
+  }
+  .cblock__meta dt {
+    font-size: 10.5px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted-2);
+    font-family: var(--body);
+  }
+  .cblock__meta dd {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--ink);
+  }
+
+  .cblock__act {
+    margin-top: auto;
+    padding-top: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    text-align: center;
+  }
+  .cblock__act .btn {
+    width: 100%;
+  }
+  .cblock__review {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--emerald-2);
+    font-family: var(--body);
+  }
+  .cblock__review:hover {
+    color: var(--emerald);
+  }
+
+  .rankings__foot {
+    margin-top: 26px;
+    font-size: 13px;
+    color: var(--muted);
+    text-align: center;
+  }
+  .rankings__foot a {
+    color: var(--emerald-2);
+    font-weight: 600;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  @media (max-width: 940px) {
+    .grid {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+  @media (max-width: 560px) {
+    .grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

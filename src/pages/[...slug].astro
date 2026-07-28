@@ -1,0 +1,1752 @@
+---
+import Layout from "../layouts/Layout.astro"
+import Nav from "../components/Nav.astro"
+import Footer from "../components/Footer.astro"
+import Breadcrumbs from "../components/Breadcrumbs.astro"
+
+const STAGING = "https://wordpress-362361-6550593.cloudwaysapps.com"
+
+export async function getStaticPaths() {
+  const endpoint = import.meta.env.WP_GRAPHQL_URL
+  if (!endpoint) {
+    console.warn("[wp] WP_GRAPHQL_URL is not set")
+    return []
+  }
+
+  const STAGING = "https://wordpress-362361-6550593.cloudwaysapps.com"
+  const MEDIA = (import.meta.env.WP_MEDIA_URL ?? STAGING).replace(/\/$/, "")
+  const mediaUrl = u => (u ? u.replaceAll(STAGING, MEDIA) : u)
+
+  // browser-like User-Agent, returning an HTML block page instead of JSON.
+  const safeHeaders = {
+    "Content-Type": "application/json",
+    "User-Agent":
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+  }
+
+  const POST_FIELDS = `title slug uri date modified excerpt content
+    featuredImage { node { sourceUrl altText } }
+    categories(first: 3) { nodes { name } }
+    author { node { name description url avatar { url } } }`
+
+  const PAGE_FIELDS = `title slug uri date modified content isFrontPage
+    featuredImage { node { sourceUrl altText } }`
+
+  const REVIEW_FIELDS = `title slug uri date modified content
+    featuredImage { node { sourceUrl altText } }`
+
+  async function fetchAll(root, fields) {
+    const items = []
+    let after = null
+    for (let i = 0; i < 50; i++) {
+      const query = `query($after: String) {
+        ${root}(first: 100, after: $after) {
+          pageInfo { hasNextPage endCursor }
+          nodes { ${fields} }
+        }
+      }`
+      let json
+      try {
+        const res = await fetch(endpoint, {
+          method: "POST",
+          headers: safeHeaders,
+          body: JSON.stringify({ query, variables: { after } }),
+        })
+        json = await res.json()
+      } catch (e) {
+        console.error(`[wp] ${root} network error:`, e)
+        break
+      }
+      if (json.errors) {
+        console.error(
+          `[wp] ${root} GraphQL errors:`,
+          JSON.stringify(json.errors, null, 2),
+        )
+        break
+      }
+      const conn = json.data?.[root]
+      if (!conn) break
+      items.push(...(conn.nodes ?? []))
+      if (!conn.pageInfo?.hasNextPage) break
+      after = conn.pageInfo.endCursor
+    }
+    return items
+  }
+
+  const [posts, pages, reviews] = await Promise.all([
+    fetchAll("posts", POST_FIELDS),
+    fetchAll("pages", PAGE_FIELDS),
+    fetchAll("casinoReviews", REVIEW_FIELDS),
+  ])
+  console.log(
+    "[wp] fetched posts:",
+    posts.length,
+    " pages:",
+    pages.length,
+    " reviews:",
+    reviews.length,
+  )
+
+  const clean = (uri, slug) => (uri || `/${slug}/`).replace(/^\/+|\/+$/g, "")
+  const stripText = h =>
+    (h ?? "")
+      .replace(/<[^>]+>/g, "")
+      .replace(/&hellip;/g, "…")
+      .trim()
+  const readOf = html =>
+    Math.max(
+      1,
+      Math.ceil(stripText(html).split(/\s+/).filter(Boolean).length / 200),
+    )
+
+  const toCard = p => ({
+    title: p.title,
+    href: "/" + clean(p.uri, p.slug) + "/",
+    img: mediaUrl(p.featuredImage?.node?.sourceUrl ?? null),
+    alt: p.featuredImage?.node?.altText ?? p.title,
+    cat: p.categories?.nodes?.[0]?.name ?? "News",
+    author: p.author?.node?.name ?? null,
+    avatar: mediaUrl(p.author?.node?.avatar?.url ?? null),
+    read: `${readOf(p.content)} min read`,
+  })
+  const relatedFor = current => {
+    const curCats = new Set((current.categories?.nodes ?? []).map(c => c.name))
+    const others = posts.filter(p => p !== current)
+    const same = others.filter(p =>
+      (p.categories?.nodes ?? []).some(c => curCats.has(c.name)),
+    )
+    const rest = others.filter(p => !same.includes(p))
+    return [...same, ...rest].slice(0, 3).map(toCard)
+  }
+
+  const toReviewCard = r => ({
+    title: r.title,
+    href: "/" + clean(r.uri, r.slug) + "/",
+    logo: mediaUrl(r.featuredImage?.node?.sourceUrl ?? null),
+    alt: r.featuredImage?.node?.altText ?? r.title,
+  })
+  const relatedReviews = current =>
+    reviews
+      .filter(r => r !== current)
+      .slice(0, 3)
+      .map(toReviewCard)
+
+  const paths = []
+  const seen = new Set()
+  for (const node of posts) {
+    const slug = clean(node.uri, node.slug)
+    if (!slug || seen.has(slug)) continue
+    seen.add(slug)
+    paths.push({
+      params: { slug },
+      props: { type: "post", node, related: relatedFor(node) },
+    })
+  }
+  for (const node of reviews) {
+    const slug = clean(node.uri, node.slug)
+    if (!slug || seen.has(slug)) continue
+    seen.add(slug)
+    paths.push({
+      params: { slug },
+      props: { type: "review", node, related: relatedReviews(node) },
+    })
+  }
+  for (const node of pages) {
+    let slug = clean(node.uri, node.slug)
+
+    // Relocate the WordPress front page to /online-casinos
+    // (its uri is "/" which cleans to an empty slug and would collide with the Astro homepage)
+    if (node.isFrontPage || slug === "") {
+      slug = "online-casinos"
+    }
+
+    if (!slug || seen.has(slug)) continue
+    seen.add(slug)
+    paths.push({ params: { slug }, props: { type: "page", node, related: [] } })
+  }
+  return paths
+}
+
+const { type, node, related = [] } = Astro.props
+const isPost = type === "post"
+const isReview = type === "review"
+
+const MEDIA = (import.meta.env.WP_MEDIA_URL ?? STAGING).replace(/\/$/, "")
+const mediaUrl = u => (u ? u.replaceAll(STAGING, MEDIA) : u)
+
+const rewriteMedia = html =>
+  (html ?? "")
+    .replaceAll(STAGING, MEDIA)
+    .replace(/(["'\s(,])\/wp-(content|includes)\//g, `$1${MEDIA}/wp-$2/`)
+    .replace(
+      /<script[^>]*type=["']application\/ld\+json["'][^>]*>[\s\S]*?<\/script>/gi,
+      "",
+    )
+
+const strip = h =>
+  (h ?? "")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&hellip;/g, "…")
+    .trim()
+const fmtDate = d =>
+  d
+    ? new Date(d).toLocaleDateString("en-US", {
+        month: "long",
+        day: "numeric",
+        year: "numeric",
+      })
+    : ""
+
+const title = node.title
+let contentHtml = rewriteMedia(node.content)
+const description = strip(node.excerpt) || strip(node.content).slice(0, 155)
+const heroImage = mediaUrl(node.featuredImage?.node?.sourceUrl ?? null)
+const heroAlt = node.featuredImage?.node?.altText ?? title
+
+const author = node.author?.node ?? null
+const authorUrl = mediaUrl(author?.url ?? null)
+
+// Manual avatar overrides — keyed by exact WP display name.
+// Paths are root-relative (no domain) so they work on localhost,
+// Vercel preview URLs, and production alike.
+const manualAvatars: Record<string, string> = {
+  "Evans Bonnie": "/wp-content/uploads/2024/08/bonnie-evans.png",
+  Bonnie: "/wp-content/uploads/2024/08/bonnie-evans.png",
+  "Charlotte Watts": "/wp-content/uploads/2025/09/charlotte-watts.png",
+  Charlotte: "/wp-content/uploads/2025/09/charlotte-watts.png",
+  "Jordie Hillcreek": "/wp-content/uploads/2024/08/Jordie-Hillcreek.png",
+  Jordie: "/wp-content/uploads/2024/08/Jordie-Hillcreek.png",
+  "Margaret Cooper": "/wp-content/uploads/2024/07/Margaret-Cooper-us.webp",
+  Margaret: "/wp-content/uploads/2024/07/Margaret-Cooper-us.webp",
+}
+
+const isDefaultWpAvatar = (url: string | null | undefined) =>
+  !url || /mystery-man|gravatar\.com\/avatar\/.*d=mm/i.test(url)
+
+const authorAvatar =
+  (author?.name && manualAvatars[author.name]) ||
+  (!isDefaultWpAvatar(author?.avatar?.url)
+    ? mediaUrl(author.avatar.url)
+    : null) ||
+  (author?.name
+    ? `https://ui-avatars.com/api/?name=${encodeURIComponent(author.name)}&background=1a233a&color=fff&bold=true`
+    : null)
+
+const cat = node.categories?.nodes?.[0]?.name ?? null
+const published = fmtDate(node.date)
+const updated = fmtDate(node.modified)
+const words = strip(node.content).split(/\s+/).filter(Boolean).length
+const readTime = Math.max(1, Math.ceil(words / 200))
+const canonical = new URL(Astro.url.pathname, Astro.site).toString()
+
+const visitUrl = `https://goto.usplayercheck.com/${node.slug}.home`
+
+const rf = node.reviewFields ?? {}
+const rating = rf.rating != null && rf.rating !== "" ? Number(rf.rating) : null
+const promoHeadline = rf.promoHeadline ?? null
+const promoDescription = strip(rf.promoDescription ?? "")
+
+const socials = []
+if (authorUrl) socials.push({ network: "website", url: authorUrl })
+
+const socialIcon = {
+  website:
+    '<path d="M12 3a9 9 0 100 18 9 9 0 000-18zM3 12h18M12 3c2.5 2.5 2.5 15.5 0 18M12 3c-2.5 2.5-2.5 15.5 0 18" fill="none" stroke="currentColor" stroke-width="1.6"/>',
+  twitter:
+    '<path d="M4 4l7 9-7 7h2.5l5.5-5.5L16 20h4l-7.3-9.4L19.5 4H17l-5 5L8 4z" fill="currentColor"/>',
+  facebook:
+    '<path d="M14 7h2V4h-2.5C11 4 10 5.6 10 7.5V9H8v3h2v8h3v-8h2.2l.8-3H13V7.6c0-.4.3-.6.7-.6z" fill="currentColor"/>',
+  linkedin:
+    '<path d="M6 9v9M6 6v.01M10 18v-5a2 2 0 014 0v5M10 12v6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>',
+}
+
+const trustIcon = {
+  shield:
+    '<path d="M12 2l8 3v6.5c0 5-3.4 8.8-8 10.5-4.6-1.7-8-5.5-8-10.5V5l8-3z" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M8.3 12l2.6 2.6 4.8-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>',
+  lock: '<rect x="4" y="10" width="16" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M8 10V7a4 4 0 018 0v3" fill="none" stroke="currentColor" stroke-width="1.8"/>',
+  check:
+    '<circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M9 12l2 2 4-4.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>',
+}
+
+const slugifyHeading = text =>
+  text
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)+/g, "")
+
+const tocItems: { text: string; slug: string }[] = []
+contentHtml = contentHtml.replace(
+  /<h2([^>]*)>([\s\S]*?)<\/h2>/gi,
+  (match, attrs, inner) => {
+    const cleanText = strip(inner)
+    if (!cleanText) return match
+    const headingSlug = slugifyHeading(cleanText)
+    tocItems.push({ text: cleanText, slug: headingSlug })
+    if (/\sid=/.test(attrs)) return match
+    return `<h2${attrs} id="${headingSlug}">${inner}</h2>`
+  },
+)
+
+const siteUrl = "https://usplayercheck.com"
+
+function slugify(str) {
+  return (str || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)+/g, "")
+}
+
+const crumbItems = isReview
+  ? [
+      { label: "Home", href: "/" },
+      { label: "Casino Reviews", href: "/casino-reviews/" },
+      { label: title },
+    ]
+  : isPost
+    ? [
+        { label: "Home", href: "/" },
+        ...(cat ? [{ label: cat, href: `/category/${slugify(cat)}/` }] : []),
+        { label: title },
+      ]
+    : [{ label: "Home", href: "/" }, { label: title }]
+
+const breadcrumbSchema = {
+  "@type": "BreadcrumbList",
+  "@id": `${canonical}#breadcrumb`,
+  itemListElement: crumbItems.map((crumb, i) => ({
+    "@type": "ListItem",
+    position: i + 1,
+    name: crumb.label,
+    item: crumb.href ? `${siteUrl}${crumb.href}` : canonical,
+  })),
+}
+
+const authorSlug = author?.name ? slugify(author.name) : null
+const authorPerson = author?.name
+  ? {
+      "@type": "Person",
+      "@id": authorSlug
+        ? `${siteUrl}/about-us/${authorSlug}/#person`
+        : `${canonical}#author`,
+      name: author.name,
+      ...(authorSlug ? { url: `${siteUrl}/about-us/${authorSlug}/` } : {}),
+      ...(author.avatar?.url ? { image: mediaUrl(author.avatar.url) } : {}),
+      ...(author.description ? { description: strip(author.description) } : {}),
+    }
+  : null
+
+const articleSchema = isPost
+  ? {
+      "@type": "Article",
+      "@id": `${canonical}#article`,
+      headline: title,
+      description,
+      datePublished: node.date,
+      dateModified: node.modified,
+      mainEntityOfPage: canonical,
+      ...(heroImage ? { image: [heroImage] } : {}),
+      ...(authorPerson ? { author: { "@id": authorPerson["@id"] } } : {}),
+      publisher: {
+        "@type": "Organization",
+        name: "US Player Check",
+        logo: {
+          "@type": "ImageObject",
+          url: `${siteUrl}/images/usplayercheck-blue_logo.png`,
+        },
+      },
+    }
+  : null
+
+const reviewSchema = isReview
+  ? {
+      "@type": "Review",
+      "@id": `${canonical}#review`,
+      name: title,
+      url: canonical,
+      datePublished: node.date,
+      dateModified: node.modified,
+      ...(heroImage ? { image: [heroImage] } : {}),
+      itemReviewed: {
+        "@type": "Organization",
+        name: title.replace(/\s*review.*$/i, "").trim(),
+        ...(heroImage ? { image: heroImage } : {}),
+      },
+      author: { "@type": "Organization", name: "US Player Check" },
+      publisher: { "@type": "Organization", name: "US Player Check" },
+      ...(rating != null
+        ? {
+            reviewRating: {
+              "@type": "Rating",
+              ratingValue: rating,
+              bestRating: "5",
+              worstRating: "0",
+            },
+          }
+        : {}),
+    }
+  : null
+
+const faqPairs = []
+const faqRegex =
+  /class="[^"]*panel-title[^"]*"[^>]*>([\s\S]*?)<\/(?:a|div|button)>[\s\S]*?class="[^"]*panel-body[^"]*"[^>]*>([\s\S]*?)<\/div>/gi
+let faqMatch
+while ((faqMatch = faqRegex.exec(contentHtml)) !== null) {
+  const q = strip(faqMatch[1])
+  const a = strip(faqMatch[2])
+  if (q && a) faqPairs.push({ question: q, answer: a })
+}
+
+const faqSchema =
+  faqPairs.length > 0
+    ? {
+        "@type": "FAQPage",
+        "@id": `${canonical}#faq`,
+        mainEntity: faqPairs.map(({ question, answer }) => ({
+          "@type": "Question",
+          name: question,
+          acceptedAnswer: { "@type": "Answer", text: answer },
+        })),
+      }
+    : null
+
+const schemaGraph = {
+  "@context": "https://schema.org",
+  "@graph": [
+    authorPerson,
+    breadcrumbSchema,
+    articleSchema,
+    reviewSchema,
+    faqSchema,
+  ].filter(Boolean),
+}
+---
+
+<Layout
+  title={`${title} – US Player Check`}
+  description={description}
+  image={heroImage ?? "/og-default.png"}
+>
+  <Nav />
+  <Breadcrumbs items={crumbItems} />
+
+  <script type="application/ld+json" set:html={JSON.stringify(schemaGraph)} />
+
+  {
+    isReview ? (
+      <article class="entry rentry">
+        <header class="rband">
+          <div class="wrap rband__inner">
+            {heroImage && (
+              <div class="rband__logo">
+                <img src={heroImage} alt={heroAlt} loading="lazy" />
+                {rating != null && (
+                  <span class="rband__rating">
+                    {rating.toFixed(1)}{" "}
+                    <svg
+                      viewBox="0 0 20 20"
+                      width="12"
+                      height="12"
+                      aria-hidden="true"
+                    >
+                      <path
+                        d="M10 1.5l2.6 5.3 5.9.85-4.25 4.15 1 5.85L10 15.9l-5.25 2.6 1-5.85L1.5 7.65l5.9-.85z"
+                        fill="currentColor"
+                      />
+                    </svg>
+                  </span>
+                )}
+              </div>
+            )}
+
+            <div class="rband__text">
+              <h1 class="rband__title">{title}</h1>
+              {promoHeadline && (
+                <p class="rband__promo" set:html={promoHeadline} />
+              )}
+              {promoDescription && (
+                <p class="rband__terms">{promoDescription}</p>
+              )}
+            </div>
+
+            <div class="rband__cta">
+              <a
+                class="btn btn-emerald rband__btn"
+                href={visitUrl}
+                rel="nofollow sponsored noopener"
+                target="_blank"
+              >
+                Sign Up →
+              </a>
+              <span class="rband__note">New players only · 18+</span>
+            </div>
+          </div>
+        </header>
+
+        {tocItems.length > 0 && (
+          <div class="wrap">
+            <nav class="toc" aria-label="Table of contents">
+              <button class="toc__toggle" type="button" aria-expanded="false">
+                <span>Table of Contents</span>
+                <span class="toc__badge">Show</span>
+              </button>
+              <ul class="toc__list" hidden>
+                {tocItems.map((item: { text: string; slug: string }) => (
+                  <li>
+                    <a href={`#${item.slug}`}>{item.text}</a>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+          </div>
+        )}
+
+        <div class="wrap rentry__grid">
+          <div class="prose" id="review-body" set:html={contentHtml} />
+          <aside class="rsidebar" aria-label="Quick summary">
+            <div class="rsidebar__card">
+              {heroImage && (
+                <img
+                  class="rsidebar__logo"
+                  src={heroImage}
+                  alt={heroAlt}
+                  loading="lazy"
+                />
+              )}
+              <span class="rsidebar__label">Our verdict</span>
+              <p class="rsidebar__name">
+                {title.replace(/\s*review.*$/i, "").trim()}
+              </p>
+              <dl class="rsidebar__facts">
+                <div>
+                  <dt>Reviewed</dt>
+                  <dd>{published}</dd>
+                </div>
+                {updated && updated !== published && (
+                  <div>
+                    <dt>Updated</dt>
+                    <dd>{updated}</dd>
+                  </div>
+                )}
+                <div>
+                  <dt>Status</dt>
+                  <dd>Accepting US players</dd>
+                </div>
+              </dl>
+
+              <a
+                class="btn btn-gold rsidebar__cta"
+                href={visitUrl}
+                rel="nofollow sponsored noopener"
+                target="_blank"
+              >
+                Visit Casino
+              </a>
+              <span class="rsidebar__note">
+                18+ · Terms apply · Gamble responsibly
+              </span>
+            </div>
+          </aside>
+        </div>
+      </article>
+    ) : isPost ? (
+      <article class="entry">
+        <header class="phero">
+          <div class="phero__glow" aria-hidden="true" />
+          <div class="wrap phero__inner">
+            {cat && <span class="phero__cat">{cat}</span>}
+            <h1 class="phero__title">{title}</h1>
+
+            <div class="byline">
+              {authorAvatar && (
+                <img
+                  class="byline__avatar"
+                  src={authorAvatar}
+                  alt={author?.name ?? "Author"}
+                  width="44"
+                  height="44"
+                  loading="lazy"
+                />
+              )}
+              <div class="byline__text">
+                {author?.name && (
+                  <span class="byline__name">{author.name}</span>
+                )}
+                <span class="byline__meta">
+                  {published}
+                  {updated && updated !== published
+                    ? ` · Updated ${updated}`
+                    : ""}
+                  {` · ${readTime} min read`}
+                </span>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        {tocItems.length > 0 && (
+          <div class="wrap">
+            <nav class="toc" aria-label="Table of contents">
+              <button class="toc__toggle" type="button" aria-expanded="false">
+                <span>Table of Contents</span>
+                <span class="toc__badge">Show</span>
+              </button>
+              <ul class="toc__list" hidden>
+                {tocItems.map((item: { text: string; slug: string }) => (
+                  <li>
+                    <a href={`#${item.slug}`}>{item.text}</a>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+          </div>
+        )}
+
+        {heroImage && (
+          <div class="wrap">
+            <img
+              class="entry__cover"
+              src={heroImage}
+              alt={heroAlt}
+              width="1200"
+              height="630"
+              loading="lazy"
+            />
+          </div>
+        )}
+
+        <div class="wrap">
+          <div class="prose" set:html={contentHtml} />
+        </div>
+
+        {author && (
+          <div class="wrap">
+            <aside class="authorcard">
+              {authorAvatar && (
+                <img
+                  class="authorcard__avatar"
+                  src={authorAvatar}
+                  alt={author.name}
+                  width="72"
+                  height="72"
+                  loading="lazy"
+                />
+              )}
+              <div class="authorcard__body">
+                <span class="authorcard__label">Written by</span>
+                <h2 class="authorcard__name">{author.name}</h2>
+                {author.description && (
+                  <p class="authorcard__bio">{author.description}</p>
+                )}
+                {socials.length > 0 && (
+                  <div class="authorcard__socials">
+                    {socials.map(s => (
+                      <a
+                        href={s.url}
+                        target="_blank"
+                        rel="noopener"
+                        aria-label={s.network}
+                      >
+                        <svg
+                          viewBox="0 0 24 24"
+                          width="18"
+                          height="18"
+                          set:html={socialIcon[s.network] ?? socialIcon.website}
+                        />
+                      </a>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </aside>
+          </div>
+        )}
+      </article>
+      
+    ) : (
+      <article class="entry">
+        <header class="ghero">
+          <div class="wrap">
+            <h1 class="ghero__title">{title}</h1>
+          </div>
+        </header>
+
+        {tocItems.length > 0 && (
+          <div class="wrap">
+            <nav class="toc" aria-label="Table of contents">
+              <button class="toc__toggle" type="button" aria-expanded="false">
+                <span>Table of Contents</span>
+                <span class="toc__badge">Show</span>
+              </button>
+              <ul class="toc__list" hidden>
+                {tocItems.map((item: { text: string; slug: string }) => (
+                  <li>
+                    <a href={`#${item.slug}`}>{item.text}</a>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+          </div>
+        )}
+
+        <div class="wrap">
+          <div class="prose" set:html={contentHtml} />
+        </div>
+      </article>
+    )
+  }
+
+  {
+    isPost && related.length > 0 && (
+      <section class="related">
+        <div class="wrap">
+          <h2 class="related__title">Related reading</h2>
+          <div class="related__grid">
+            {related.map(r => (
+              <a class="rcard" href={r.href}>
+                <div class="rcard__media">
+                  {r.img && (
+                    <img
+                      class="rcard__img"
+                      src={r.img}
+                      alt={r.alt}
+                      loading="lazy"
+                    />
+                  )}
+                  <span class="rcard__cat">{r.cat}</span>
+                </div>
+                <h3 class="rcard__title">{r.title}</h3>
+                <div class="rcard__by">
+                  {r.avatar && (
+                    <img
+                      class="rcard__avatar"
+                      src={r.avatar}
+                      alt={r.author}
+                      width="24"
+                      height="24"
+                      loading="lazy"
+                    />
+                  )}
+                  {r.author && <span class="rcard__author">{r.author}</span>}
+                  <span class="rcard__meta">· {r.read}</span>
+                </div>
+              </a>
+            ))}
+          </div>
+        </div>
+      </section>
+    )
+  }
+
+  {
+    isReview && related.length > 0 && (
+      <section class="related">
+        <div class="wrap">
+          <h2 class="related__title">Related casino reviews</h2>
+          <div class="related__grid related__grid--reviews">
+            {related.map(r => (
+              <a class="rvcard" href={r.href}>
+                <div class="rvcard__logo">
+                  {r.logo && <img src={r.logo} alt={r.alt} loading="lazy" />}
+                </div>
+                <h3 class="rvcard__name">{r.title}</h3>
+                <span class="rvcard__cta">Read review →</span>
+              </a>
+            ))}
+          </div>
+        </div>
+      </section>
+    )
+  }
+
+  <Footer />
+</Layout>
+
+<style>
+  /* ---- Post hero (centered editorial) ---- */
+  .phero {
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(180deg, #26356f 0%, var(--emerald) 70%);
+    color: #fff;
+    padding: clamp(48px, 7vw, 92px) 0 clamp(64px, 8vw, 50px);
+  }
+  .phero__glow {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(
+        60% 60% at 50% -10%,
+        rgba(58, 87, 192, 0.55),
+        transparent 60%
+      ),
+      radial-gradient(
+        40% 50% at 100% 100%,
+        rgba(200, 162, 75, 0.12),
+        transparent 60%
+      );
+  }
+  .phero__inner {
+    position: relative;
+    max-width: 1200px;
+    margin-inline: auto;
+    text-align: center;
+  }
+  .phero__cat {
+    display: inline-block;
+    font-family: var(--body);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--gold-2);
+    background: rgba(228, 203, 134, 0.12);
+    border: 1px solid rgba(228, 203, 134, 0.3);
+    border-radius: 999px;
+    padding: 6px 14px;
+  }
+  .phero__title {
+    color: #fff;
+    font-size: clamp(32px, 4.6vw, 54px);
+    line-height: 1.06;
+    letter-spacing: -0.03em;
+    margin: 18px auto 0;
+    max-width: 100%;
+  }
+  .byline {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 26px;
+    text-align: left;
+  }
+  .byline__avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    flex: none;
+  }
+  .byline__text {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+  .byline__name {
+    font-weight: 700;
+    font-size: 14.5px;
+  }
+  .byline__meta {
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.72);
+  }
+
+  .entry__cover {
+    display: block;
+    width: 100%;
+    max-width: 920px;
+    margin: clamp(-72px, -7vw, -52px) auto 0;
+    aspect-ratio: 1200 / 630;
+    object-fit: cover;
+    border-radius: 18px;
+    box-shadow: 0 24px 60px -24px rgba(15, 22, 40, 0.55);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+  }
+
+  /* ---- Review hero (logo + CTA) ---- */
+  .rhero {
+    position: relative;
+    overflow: hidden;
+    text-align: center;
+    background: linear-gradient(180deg, #26356f 0%, var(--emerald) 70%);
+    color: #fff;
+    padding: clamp(40px, 6vw, 80px) 0 clamp(40px, 5vw, 64px);
+  }
+  .rhero__glow {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(
+      60% 60% at 50% -10%,
+      rgba(58, 87, 192, 0.55),
+      transparent 60%
+    );
+  }
+  .rhero__inner {
+    position: relative;
+    max-width: 760px;
+    margin-inline: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .rhero__logo {
+    width: 116px;
+    height: 116px;
+    margin: 18px 0 6px;
+    padding: 16px;
+    background: #fff;
+    border-radius: 22px;
+    box-shadow: var(--shadow-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .rhero__logo img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+  }
+  .rhero__meta {
+    margin-top: 12px;
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.72);
+  }
+  .rhero__cta {
+    margin-top: 24px;
+  }
+
+  /* ---- Page hero ---- */
+  .ghero {
+    padding-block: clamp(40px, 5vw, 40px);
+    border-bottom: 1px solid var(--line);
+  }
+  .ghero__title {
+    font-size: clamp(30px, 4.4vw, 50px);
+    letter-spacing: -0.025em;
+    color: var(--ink);
+    max-width: 100%;
+  }
+  .ghero__updated {
+    margin-top: 10px;
+    font-size: 13.5px;
+    color: var(--muted-2);
+  }
+
+  /* ---- WordPress content ---- */
+  .prose {
+    max-width: 1200px;
+    margin: 12px auto 24px;
+    font-size: 17px;
+    line-height: 1.75;
+    color: var(--ink);
+  }
+  .prose :global(h2) {
+    font-size: 28px;
+    margin: 42px 0 14px;
+    letter-spacing: -0.02em;
+  }
+  .prose :global(h3) {
+    font-size: 22px;
+    margin: 32px 0 12px;
+  }
+  .prose :global(p) {
+    margin: 0 0 18px;
+    color: var(--muted);
+  }
+  .prose :global(a) {
+    color: var(--emerald-2);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .prose :global(a:hover) {
+    color: var(--emerald);
+  }
+  .prose :global(ul),
+  .prose :global(ol) {
+    margin: 0 0 18px;
+    padding-left: 22px;
+    color: var(--muted);
+  }
+  .prose :global(li) {
+    margin: 6px 0;
+  }
+  .prose :global(img) {
+    max-width: 100%;
+    height: auto;
+    border-radius: var(--radius-sm);
+    margin: 12px 0;
+  }
+  .prose :global(blockquote) {
+    margin: 24px 0;
+    padding: 8px 18px;
+    border-left: 3px solid var(--gold);
+    color: var(--ink);
+    font-style: italic;
+  }
+  .prose :global(figure) {
+    margin: 20px 0;
+  }
+  .prose :global(table) {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px 0;
+    font-size: 15px;
+  }
+  .prose :global(th),
+  .prose :global(td) {
+    border: 1px solid var(--line);
+    padding: 10px 12px;
+    text-align: left;
+  }
+  .prose :global(th) {
+    background: var(--ivory-2);
+  }
+
+  /* ---- Author card (end of post) ---- */
+  .authorcard {
+    max-width: 1200px;
+    margin: 8px auto 72px;
+    display: flex;
+    gap: 18px;
+    align-items: flex-start;
+    background: var(--ivory-2);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 24px;
+  }
+  .authorcard__avatar {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex: none;
+    border: 2px solid var(--white);
+    box-shadow: var(--shadow-sm);
+  }
+  .authorcard__label {
+    font-family: var(--body);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--gold-deep);
+  }
+  .authorcard__name {
+    font-size: 19px;
+    color: var(--ink);
+    margin: 4px 0 8px;
+  }
+  .authorcard__bio {
+    font-size: 14px;
+    line-height: 1.65;
+    color: var(--muted);
+    margin: 0;
+  }
+  .authorcard__socials {
+    display: flex;
+    gap: 10px;
+    margin-top: 12px;
+  }
+  .authorcard__socials a {
+    color: var(--emerald-2);
+    display: inline-flex;
+    transition: color 0.15s ease;
+  }
+  .authorcard__socials a:hover {
+    color: var(--emerald);
+  }
+
+  @media (max-width: 760px) {
+    .entry__cover {
+      margin-top: 0;
+      border-radius: 0;
+      border: 0;
+    }
+    .authorcard {
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+    .authorcard__socials {
+      justify-content: center;
+    }
+  }
+
+  /* ---- Review band header (light, horizontal) ---- */
+  .rband {
+    background: var(--ivory-2);
+    border-bottom: 1px solid var(--line);
+    padding-block: clamp(24px, 4vw, 40px);
+  }
+  .rband__inner {
+    max-width: 1200px;
+    margin-inline: auto;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: clamp(20px, 3vw, 40px);
+    align-items: center;
+  }
+
+  .rband__logo {
+    position: relative;
+    width: 120px;
+    height: 120px;
+    flex: none;
+    background: var(--white);
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    box-shadow: var(--shadow-sm);
+  }
+  .rband__logo img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+  }
+  .rband__rating {
+    position: absolute;
+    top: -10px;
+    right: -10px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-family: var(--body);
+    font-weight: 700;
+    font-size: 13px;
+    color: var(--ink);
+    background: var(--white);
+    border: 1px solid var(--gold);
+    border-radius: 999px;
+    padding: 4px 10px;
+    box-shadow: var(--shadow-sm);
+  }
+  .rband__rating svg {
+    color: var(--gold);
+  }
+
+  .rband__title {
+    font-size: clamp(24px, 3vw, 34px);
+    color: var(--emerald);
+    letter-spacing: -0.02em;
+    margin: 0;
+  }
+  .rband__promo {
+    margin: 10px 0 0;
+    font-size: 16px;
+    color: var(--ink);
+  }
+  .rband__promo :global(strong) {
+    color: var(--gold-deep);
+  }
+  .rband__terms {
+    margin: 8px 0 0;
+    font-size: 13.5px;
+    font-style: italic;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+
+  .rband__cta {
+    flex: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+  .rband__btn {
+    white-space: nowrap;
+    padding-inline: 40px;
+  }
+  .rband__note {
+    font-size: 11px;
+    color: var(--muted-2);
+  }
+
+  @media (max-width: 860px) {
+    .rband__inner {
+      grid-template-columns: 1fr;
+      justify-items: center;
+      text-align: center;
+    }
+    .rband__cta {
+      width: 100%;
+      max-width: 320px;
+    }
+    .rband__btn {
+      width: 100%;
+    }
+  }
+
+  aside.rsidebar {
+    margin-top: 13px;
+  }
+
+  .rsidebar[data-astro-cid-fzx4jmue] {
+    top: 84px !important;
+  }
+
+  /* ---- Related strip (posts + reviews) ---- */
+  .related {
+    background: var(--ivory-2);
+    border-top: 1px solid var(--line);
+    padding-block: clamp(48px, 6vw, 76px);
+  }
+  .related__title {
+    text-align: center;
+    font-size: clamp(24px, 3vw, 34px);
+    letter-spacing: -0.02em;
+    color: var(--ink);
+    margin-bottom: 34px;
+  }
+  .related__grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    max-width: 1060px;
+    margin-inline: auto;
+  }
+  .rcard {
+    display: flex;
+    flex-direction: column;
+    background: var(--white);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+    transition:
+      transform 0.18s ease,
+      box-shadow 0.2s ease,
+      border-color 0.2s ease;
+  }
+  .rcard:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-md);
+    border-color: var(--line-2);
+  }
+  .rcard__media {
+    position: relative;
+    aspect-ratio: 16 / 9;
+    background: linear-gradient(135deg, var(--emerald-2), var(--emerald));
+  }
+  .rcard__img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .rcard__cat {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    z-index: 2;
+    font-family: var(--body);
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--emerald);
+    background: var(--gold-2);
+    padding: 4px 9px;
+    border-radius: 999px;
+  }
+  .rcard__title {
+    font-size: 16.5px;
+    line-height: 1.3;
+    color: var(--ink);
+    padding: 14px 16px 0;
+  }
+  .rcard__by {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin-top: auto;
+    padding: 10px 16px 16px;
+    font-size: 12.5px;
+    color: var(--muted-2);
+  }
+  .rcard__avatar {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex: none;
+  }
+  .rcard__author {
+    font-weight: 600;
+    color: var(--ink);
+  }
+
+  /* Review cards (logo + name) */
+  .rvcard {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    background: var(--white);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 26px 20px;
+    box-shadow: var(--shadow-sm);
+    transition:
+      transform 0.18s ease,
+      box-shadow 0.2s ease,
+      border-color 0.2s ease;
+  }
+  .rvcard:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-md);
+    border-color: var(--line-2);
+  }
+  .rvcard__logo {
+    width: 88px;
+    height: 88px;
+    padding: 12px;
+    margin-bottom: 14px;
+    background: var(--ivory);
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .rvcard__logo img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+  }
+  .rvcard__name {
+    font-size: 17px;
+    color: var(--ink);
+  }
+  .rvcard__cta {
+    margin-top: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--emerald-2);
+  }
+
+  @media (max-width: 860px) {
+    .related__grid {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+  @media (max-width: 560px) {
+    .related__grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  /* ---- WP bonus tables inside content ---- */
+  table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    margin: 28px 0;
+    font-family:
+      -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: #fff;
+    border: 1px solid #e6e9f1;
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 10px 30px -18px rgba(15, 22, 40, 0.35);
+  }
+  table tr:first-child td {
+    background: #1f2f6b;
+    color: #fff;
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 15px 20px;
+  }
+  table tr:first-child td strong {
+    color: #fff;
+  }
+  table td {
+    padding: 15px 20px;
+    font-size: 15px;
+    color: #565e72;
+    border-top: 1px solid #eef1f8;
+    width: auto !important;
+  }
+  table tr:nth-child(even) {
+    background: #fafbfe;
+  }
+  table tr:not(:first-child):hover {
+    background: #f3f5fb;
+  }
+  table td:first-child strong {
+    color: #131a2e;
+    font-weight: 700;
+  }
+  table td:last-child strong {
+    display: inline-block;
+    font-family: "SFMono-Regular", Consolas, monospace;
+    font-size: 13px;
+    letter-spacing: 0.03em;
+    color: #7a5e18;
+    background: #f7f0db;
+    border: 1px solid #e4cb86;
+    border-radius: 8px;
+    padding: 5px 11px;
+  }
+
+  /* ---- Review hero extras ---- */
+  .rhero__trust {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px 14px;
+    margin-top: 22px;
+  }
+  .tbadge {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-family: var(--body);
+    font-size: 12.5px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.92);
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 999px;
+    padding: 7px 14px;
+  }
+  .tbadge svg {
+    color: var(--gold-2);
+    flex: none;
+  }
+
+  .rhero__actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 16px 22px;
+    margin-top: 26px;
+  }
+  .rhero__jump {
+    font-family: var(--body);
+    font-weight: 600;
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.82);
+  }
+  .rhero__jump:hover {
+    color: #fff;
+  }
+
+  /* ---- Review body + sticky sidebar ---- */
+  .rentry__grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    gap: 40px;
+    align-items: start;
+    max-width: 1200px;
+    margin-inline: auto;
+  }
+  .rentry__grid .prose {
+    margin-inline: 0;
+    max-width: none;
+  }
+
+  .rsidebar {
+    position: sticky;
+    top: 24px;
+  }
+  .rsidebar__card {
+    background: var(--white);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-md);
+    padding: 24px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .rsidebar__logo {
+    width: 84px;
+    height: 84px;
+    object-fit: contain;
+    padding: 10px;
+    background: var(--ivory);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    margin-bottom: 14px;
+  }
+  .rsidebar__label {
+    font-family: var(--body);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--gold-deep);
+  }
+  .rsidebar__name {
+    font-size: 18px;
+    color: var(--ink);
+    margin: 4px 0 16px;
+    font-weight: 700;
+  }
+  .rsidebar__facts {
+    width: 100%;
+    margin: 0 0 18px;
+    padding: 0;
+    display: grid;
+    gap: 0;
+  }
+  .rsidebar__facts div {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 0;
+    border-top: 1px solid var(--line);
+    font-size: 13.5px;
+  }
+  .rsidebar__facts div:last-child {
+    border-bottom: 1px solid var(--line);
+  }
+  .rsidebar__facts dt {
+    color: var(--muted-2);
+    margin: 0;
+  }
+  .rsidebar__facts dd {
+    color: var(--ink);
+    font-weight: 600;
+    margin: 0;
+    text-align: right;
+  }
+  .rsidebar__cta {
+    width: 100%;
+  }
+  .rsidebar__note {
+    font-size: 11px;
+    color: var(--muted-2);
+    margin-top: 12px;
+    line-height: 1.4;
+  }
+
+  @media (max-width: 960px) {
+    .rentry__grid {
+      grid-template-columns: 1fr;
+    }
+    .rsidebar {
+      position: static;
+      order: -1;
+      max-width: 420px;
+      margin-inline: auto;
+    }
+  }
+
+  /* ---- Pros / Cons columns (WP block output) ---- */
+  .prose :global(.wp-block-columns:has(.space-pros, .space-cons)) {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin: 32px 0;
+    align-items: start;
+  }
+
+  .prose :global(.space-pros),
+  .prose :global(.space-cons) {
+    height: 100%;
+    border-radius: var(--radius);
+    border: 1px solid var(--line);
+    background: var(--white);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+  }
+  .prose :global(.space-pros) {
+    border-top: 3px solid #2e9e6b;
+  }
+  .prose :global(.space-cons) {
+    border-top: 3px solid #d9534f;
+  }
+
+  .prose :global(.space-pros-ins),
+  .prose :global(.space-cons-ins) {
+    padding: 22px 24px 8px;
+  }
+
+  /* Titles with icon */
+  .prose :global(.space-pros-title),
+  .prose :global(.space-cons-title) {
+    font-family: var(--head, inherit);
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 6px;
+  }
+  .prose :global(.space-pros-title) {
+    color: #1f7a52;
+  }
+  .prose :global(.space-cons-title) {
+    color: #b23b37;
+  }
+
+  .prose :global(.space-pros-title)::before,
+  .prose :global(.space-cons-title)::before {
+    content: "";
+    flex: none;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 15px;
+  }
+  .prose :global(.space-pros-title)::before {
+    background-color: #e4f5ec;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231f7a52' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6L9 17l-5-5'/%3E%3C/svg%3E");
+  }
+  .prose :global(.space-cons-title)::before {
+    background-color: #fbe7e6;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23b23b37' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M18 6L6 18M6 6l12 12'/%3E%3C/svg%3E");
+  }
+
+  /* Lists — kill default bullets, use custom markers */
+  .prose :global(.space-pros-description ul),
+  .prose :global(.space-cons-description ul) {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .prose :global(.space-pros-description li),
+  .prose :global(.space-cons-description li) {
+    position: relative;
+    padding: 10px 0 10px 30px;
+    font-size: 14.5px;
+    line-height: 1.55;
+    color: var(--muted);
+    border-top: 1px solid var(--line);
+  }
+  .prose :global(.space-pros-description li:first-child),
+  .prose :global(.space-cons-description li:first-child) {
+    border-top: 0;
+  }
+
+  .prose :global(.space-pros-description li)::before,
+  .prose :global(.space-cons-description li)::before {
+    position: absolute;
+    left: 0;
+    top: 11px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 11px;
+  }
+  .prose :global(.space-pros-description li)::before {
+    content: "";
+    background-color: #e4f5ec;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231f7a52' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6L9 17l-5-5'/%3E%3C/svg%3E");
+  }
+  .prose :global(.space-cons-description li)::before {
+    content: "";
+    background-color: #fbe7e6;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23b23b37' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M18 6L6 18M6 6l12 12'/%3E%3C/svg%3E");
+  }
+
+  @media (max-width: 640px) {
+    .prose :global(.wp-block-columns:has(.space-pros, .space-cons)) {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .toc {
+    margin: 20px 0 28px;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    max-width: 1200px;
+    margin-inline: auto;
+  }
+  .toc__toggle {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 16px 20px;
+    background: linear-gradient(90deg, #6d5ff0, #3a2fc9);
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    font-family: var(--body);
+    font-size: 16px;
+    font-weight: 700;
+  }
+  .toc__badge {
+    font-size: 12px;
+    font-weight: 700;
+    background: rgba(255, 255, 255, 0.18);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    border-radius: 999px;
+    padding: 4px 12px;
+  }
+  .toc__list {
+    list-style: none;
+    margin: 0;
+    padding: 16px 20px;
+    background: var(--white);
+    display: grid;
+    gap: 10px;
+  }
+  .toc__list a {
+    color: var(--emerald-2);
+    text-decoration: none;
+    font-size: 14.5px;
+  }
+  .toc__list a:hover {
+    text-decoration: underline;
+  }
+
+  .toc__list {
+    list-style: none;
+    margin: 0;
+    padding: 16px 20px;
+    background: var(--white);
+    display: grid;
+    gap: 10px;
+  }
+
+  .toc__list[hidden] {
+    display: none;
+  }
+
+  /* img.entry__cover { display: none !important; } */
+</style>
+
+<script>
+  function initTocToggles() {
+    document.querySelectorAll(".toc__toggle").forEach(btn => {
+      if (btn.dataset.tocBound === "true") return // prevent double-binding
+      btn.dataset.tocBound = "true"
+
+      btn.addEventListener("click", () => {
+        const list = btn.parentElement.querySelector(".toc__list")
+        if (!list) return
+
+        const isHidden = list.hasAttribute("hidden")
+        if (isHidden) {
+          list.removeAttribute("hidden")
+        } else {
+          list.setAttribute("hidden", "")
+        }
+        btn.setAttribute("aria-expanded", String(isHidden))
+
+        const badge = btn.querySelector(".toc__badge")
+        if (badge) badge.textContent = isHidden ? "Hide" : "Show"
+      })
+    })
+  }
+
+  // Run on first load
+  if (document.readyState !== "loading") {
+    initTocToggles()
+  } else {
+    document.addEventListener("DOMContentLoaded", initTocToggles)
+  }
+
+  // Re-run after Astro client-side navigations (View Transitions / ClientRouter)
+  document.addEventListener("astro:page-load", initTocToggles)
+</script>

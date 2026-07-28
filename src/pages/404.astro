@@ -1,0 +1,64 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Nav from '../components/Nav.astro';
+import Footer from '../components/Footer.astro';
+---
+
+<Layout
+  title="Page Not Found (404) – US Player Check"
+  description="Sorry, the page you're looking for doesn't exist or has moved."
+  noindex={true}
+>
+  <Nav />
+
+  <section class="nf">
+    <div class="wrap nf__inner">
+      <span class="nf__code">404</span>
+      <h1 class="nf__title">We couldn't find that page</h1>
+      <p class="nf__text">
+        The page you're looking for may have moved, been removed, or never existed.
+        Let's get you back on track.
+      </p>
+
+      <div class="nf__actions">
+        <a class="btn btn-gold" href="/">Back to homepage</a>
+        <a class="btn btn-ghost" href="/#casinos">See top casinos</a>
+      </div>
+
+      <div class="nf__links">
+        <span>Popular sections:</span>
+        <a href="/casino-bonuses/">Casino Bonuses</a>
+        <a href="/online-slots/">Slots Online</a>
+        <a href="/casino-reviews/">Casino Reviews</a>
+        <a href="/news/">Blog</a>
+      </div>
+    </div>
+  </section>
+
+  <Footer />
+</Layout>
+
+<style>
+  .nf { padding-block: clamp(56px, 10vw, 120px); text-align: center; }
+  .nf__inner { max-width: 640px; margin-inline: auto; }
+  .nf__code {
+    display: inline-block;
+    font-size: clamp(64px, 14vw, 130px);
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -0.04em;
+    background: linear-gradient(180deg, var(--emerald-soft), var(--emerald));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .nf__title { font-size: clamp(24px, 3.4vw, 36px); letter-spacing: -0.02em; color: var(--ink); margin-top: 8px; }
+  .nf__text { margin-top: 14px; font-size: 16px; line-height: 1.7; color: var(--muted); }
+
+  .nf__actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 28px; }
+
+  .nf__links { margin-top: 40px; font-size: 14px; color: var(--muted-2); display: flex; flex-wrap: wrap; gap: 8px 16px; justify-content: center; align-items: center; }
+  .nf__links span { font-weight: 600; color: var(--ink); }
+  .nf__links a { color: var(--emerald-2); font-weight: 600; }
+  .nf__links a:hover { color: var(--emerald); text-decoration: underline; }
+</style>

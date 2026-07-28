@@ -1,0 +1,350 @@
+---
+const cols = [
+  {
+    title: "Reviews",
+    links: [
+      { label: "Lucky Red casinos", href: "/casino-reviews/lucky-red-casino/" },
+      { label: "Café casinos", href: "/casino-reviews/cafe-casino/" },
+      { label: "Bovada Casino", href: "/casino-reviews/bovada-casino/" }, // was pointing to ignition-casino by mistake — duplicate link fixed
+      { label: "Wild Casino", href: "/casino-reviews/wild-casino/" },
+      {
+        label: "Raging Bull casinos",
+        href: "/casino-reviews/raging-bull-casino/",
+      },
+      { label: "Ignition Casino", href: "/casino-reviews/ignition-casino/" },
+    ],
+  },
+  {
+    title: "Bonuses",
+    links: [
+      { label: "No deposit bonuses", href: "/no-deposit/" },
+      { label: "Free spins", href: "/casino-bonuses/free-spins/" },
+      { label: "Welcome packages", href: "/casino-bonuses/welcome-bonus/" },
+      { label: "Cashback offers", href: "/casino-bonuses/cashback/" },
+      { label: "Bonus calculator", href: "/casino-bonuses/" },
+    ],
+  },
+  {
+    title: "Guides",
+    links: [
+      {
+        label: "Understanding wagering",
+        href: "/how-to-beat-wagering-requirements/",
+      },
+      {
+        label: "Exploring Casino Payments Gateways",
+        href: "/how-gambling-works/",
+      },
+      {
+        label: "New Player Casino Tips for Beginners",
+        href: "/new-player-tips/",
+      },
+      {
+        label: "Can I Withdraw My Casino Bonus?",
+        href: "/can-i-withdraw-my-casino-bonus/",
+      },
+      {
+        label: "How Much Does A Royal Flush Pay in Video Poker?",
+        href: "/how-much-does-a-royal-flush-pay-in-video-poker/",
+      },
+    ],
+  },
+  {
+    title: "US Player Check",
+    links: [
+      { label: "Responsible Gambling", href: "/responsible-gambling/" },
+      { label: "Casino News", href: "/news/" },
+      { label: "Editorial team", href: "/editorial-policy/" },
+      { label: "About US", href: "/about-us/" },
+      { label: "Advertising Policy", href: "/advertising-disclosure/" },
+    ],
+  },
+]
+
+// Logos instead of text badges — drop the actual files into /public/images/partners/
+const partners = [
+  { name: "18plus", logo: "/wp-content/uploads/2026/07/18plus-logo.png" },
+  { name: "gamblinghelponline", logo: "/wp-content/uploads/2026/07/gamblinghelponline.png" },
+  { name: "DMCA", logo: "/wp-content/uploads/2026/07/dmca_premi_badge_4.png" },
+  { name: "GambleAware", logo: "/wp-content/uploads/2026/07/gambleraware.webp" },
+  { name: "eCOGRA", logo: "/wp-content/uploads/2026/07/ecogra.webp" },
+  {
+    name: "Trust Pilot",
+    logo: "/wp-content/uploads/2026/07/trustpilot-wht.png",
+    href: "https://www.trustpilot.com/review/usplayercheck.com",
+  },
+]
+
+const year = new Date().getFullYear()
+---
+
+<footer class="foot">
+  <div class="wrap">
+    <div class="foot__rg">
+      <div class="foot__rg-mark" aria-hidden="true">18+</div>
+      <p>
+        Gambling can be addictive. Please play responsibly and only bet what you
+        can afford to lose. If gambling is affecting you or someone you know,
+        free confidential help is available 24/7 from the National Council on
+        Problem Gambling — call or text the National Problem Gambling Helpline
+        at
+        <a href="https://www.1800gambler.net/" target="_blank">1-800-GAMBLER</a
+        >.
+      </p>
+    </div>
+
+    <div class="foot__top">
+      <div class="foot__brand">
+        <a class="brand" href="/" aria-label="US Player Check home">
+          <span class="brand__name"
+            ><img
+              src="/images/usplayercheck-blue_logo.png"
+              title="US Play Logo"
+              alt="US Play Logo"
+            /></span
+          >
+        </a>
+        <p class="foot__tag">
+          The information provided on USPlayerCheck.com is for informational
+          purposes only. Online gambling laws and regulations may vary by
+          jurisdiction, and it is the reader’s responsibility to ensure
+          compliance with all applicable laws.
+        </p>
+
+        <p class="foot__tag">
+          <b>Address: 3 Pacific St. Oklahoma City, OK 73127</b>
+        </p>
+
+        <ul
+          class="foot__partners"
+          aria-label="Licensing and safer-gambling bodies"
+        >
+          {
+            partners.map(p => (
+              <li>
+                {p.href ? (
+                  <a href={p.href} target="_blank" rel="noopener noreferrer">
+                    <img src={p.logo} alt={p.name} loading="lazy" />
+                  </a>
+                ) : (
+                  <img src={p.logo} alt={p.name} loading="lazy" />
+                )}
+              </li>
+            ))
+          }
+        </ul>
+      </div>
+
+      <nav class="foot__cols" aria-label="Footer">
+        {
+          cols.map(col => (
+            <div class="foot__col">
+              <strong>{col.title}</strong>
+              <ul>
+                {col.links.map(l => (
+                  <li>
+                    <a href={l.href}>{l.label}</a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))
+        }
+      </nav>
+    </div>
+
+    <div class="foot__legal">
+      <p>
+        © {year} US Player Check. US Player Check is an independent comparison service
+        and is not a gambling operator. We may earn a commission from operators listed
+        on this site, at no cost to you. This never influences our ratings. 21+ where
+        required by local law. Void where prohibited.
+      </p>
+      <ul class="foot__legal-links">
+        <li><a href="/privacy-policy/">Privacy</a></li>
+        <li><a href="/responsible-gambling/">Responsible Gambling</a></li>
+        <li><a href="/gambling-addiction/">Gambling Addiction</a></li>
+        <li><a href="/dmca/">DMCA</a></li>
+        <li>
+          <a
+            href="https://www.trustpilot.com/review/usplayercheck.com"
+            target="_blank"
+            rel="noopener noreferrer">Trustpilot</a>
+        </li>
+        <li><a href="/sitemap/">Sitemap</a></li>
+      </ul>
+    </div>
+  </div>
+</footer>
+
+<style>
+  .foot {
+    background: var(--emerald);
+    color: rgba(255, 255, 255, 0.82);
+    padding-top: 48px;
+  }
+
+  .foot__rg {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(228, 203, 134, 0.22);
+    border-radius: var(--radius);
+    padding: 18px 22px;
+    margin-bottom: 48px;
+  }
+  .foot__rg-mark {
+    flex: 0 0 auto;
+    font-weight: 700;
+    font-size: 17px;
+    color: var(--emerald);
+    background: var(--gold-2);
+    border-radius: 10px;
+    padding: 10px 12px;
+    letter-spacing: 0.02em;
+  }
+  .foot__rg p {
+    font-size: 13.5px;
+    line-height: 1.55;
+  }
+  .foot__rg a {
+    color: var(--gold-2);
+    font-weight: 600;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  .foot__top {
+    display: grid;
+    grid-template-columns: 1.2fr 2fr;
+    gap: clamp(32px, 5vw, 72px);
+    padding-bottom: 44px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  }
+
+  .foot .brand {
+    display: flex;
+    align-items: center; /* aligns logo with tagline/content below instead of floating left */
+    gap: 10px;
+  }
+  .foot .brand__name {
+    color: #fff;
+    display: flex;
+    align-items: center;
+  }
+  .foot .brand__name img {
+    display: block;
+    height: 32px;
+    width: auto;
+  }
+
+  .foot__tag {
+    margin-top: 16px;
+    font-size: 14px;
+    line-height: 1.6;
+    max-width: 34ch;
+    color: rgba(255, 255, 255, 0.72);
+  }
+
+  .foot__partners {
+    list-style: none;
+    padding: 0;
+    margin: 22px 0 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+  }
+  .foot__partners li {
+    display: flex;
+    align-items: center;
+    border-radius: 6px;
+    padding: 6px 10px;
+  }
+  .foot__partners img {
+    height: 20px;
+    width: auto;
+    display: block;
+  }
+
+  .foot__cols {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 28px;
+  }
+  .foot__col strong {
+    font-family: var(--body);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--gold-2);
+    margin-bottom: 14px;
+  }
+  .foot__col ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    gap: 10px;
+  }
+  .foot__col a {
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.78);
+    transition: color 0.15s ease;
+  }
+  .foot__col a:hover {
+    color: #fff;
+  }
+
+  .foot__legal {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 24px;
+    flex-wrap: wrap;
+    padding-block: 26px 40px;
+  }
+  .foot__legal p {
+    font-size: 12px;
+    line-height: 1.6;
+    color: rgba(255, 255, 255, 0.55);
+    max-width: 70ch;
+  }
+  .foot__legal-links {
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    padding: 0;
+    margin: 0;
+  }
+  .foot__legal-links a {
+    font-size: 12.5px;
+    color: rgba(255, 255, 255, 0.7);
+  }
+  .foot__legal-links a:hover {
+    color: var(--gold-2);
+  }
+
+  @media (max-width: 860px) {
+    .foot__top {
+      grid-template-columns: 1fr;
+      gap: 36px;
+    }
+    .foot__cols {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+  @media (max-width: 460px) {
+    .foot__cols {
+      grid-template-columns: 1fr;
+    }
+    .foot__rg {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 12px;
+    }
+  }
+</style>

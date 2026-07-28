@@ -1,0 +1,367 @@
+---
+// The #1 featured casino — the editorial "verdict"
+const topPick = {
+  name: 'Velvet Royale',
+  score: '9.7',
+  bonus: '200% up to $2,000',
+  extra: '+ 100 free spins',
+  highlights: ['Payouts in under 24h', 'Licensed in Malta (MGA)', '1,900+ games'],
+};
+
+const points = [
+  {
+    label: 'Online Slots and Casino Games',
+    body: 'We feature sites with a huge range of games, from the latest progressive jackpot slots to classic table games like blackjack, roulette, and baccarat. Each review also looks at the software providers to guarantee fair play, quality graphics, and a smooth gaming experience.',
+  },
+  {
+    label: 'Fast & Secure Payouts',
+    body: 'We find casinos that deliver fast and reliable withdrawal methods, including trusted US payment methods like Visa, Mastercard, and cryptocurrency. You’ll find details on payout speeds and transaction fees, so you can cash out your winnings quickly and safely.',
+  },
+  {
+    label: 'Generous Bonuses and Promotions',
+    body: 'From welcome bonuses and free spins to no-deposit offers, our reviews break down every promotion to show you the real value behind it. We clearly explain wagering requirements and bonus terms, so you know exactly what you’re signing up for.',
+  },
+  {
+    label: 'Mobile and User Experience',
+    body: 'We test how well each online casino site performs on mobile devices, ensuring you can enjoy your favorite games anytime, anywhere.',
+  },
+  {
+    label: 'Safety and Legality',
+    body: 'We check that all casinos featured on our list are compliant with US gambling laws and are licensed and regulated by trusted authorities such as Curaçao eGaming.',
+  },
+];
+---
+
+<section class="hero">
+  <div class="hero__felt" aria-hidden="true"></div>
+
+  <div class="wrap hero__grid">
+    <div class="hero__copy">
+      <nav class="crumb" aria-label="Breadcrumb"><a href="/">Home</a></nav>
+
+      <h1 class="hero__title">Best Online Casino USA for 2026</h1>
+
+      <div class="byline">
+        <span class="byline__item">Last updated <strong>May 20, 2026</strong></span>
+        <span class="byline__dot" aria-hidden="true"></span>
+        <span class="byline__item">
+          Written by <a href="#">Margaret Cooper</a>
+          <span class="verified" title="Verified author" aria-label="Verified">
+            <svg viewBox="0 0 16 16" width="14" height="14"><circle cx="8" cy="8" r="8" fill="#0E5C43"/><path d="M4.5 8.2l2.1 2.1 4.6-4.8" fill="none" stroke="#E4CB86" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </span>
+        </span>
+        <span class="byline__dot" aria-hidden="true"></span>
+        <span class="byline__item">
+          Fact checked by <a href="#">Jordie Hillcreek</a>
+          <span class="verified" title="Fact checked" aria-label="Fact checked">
+            <svg viewBox="0 0 16 16" width="14" height="14"><circle cx="8" cy="8" r="8" fill="#0E5C43"/><path d="M4.5 8.2l2.1 2.1 4.6-4.8" fill="none" stroke="#E4CB86" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </span>
+        </span>
+      </div>
+
+      <p class="hero__lede">
+        Discover the best online casinos in the USA. All featured platforms are
+        <strong>licensed and regulated</strong> to guarantee safe and trustworthy
+        play. Real-money online casinos are legal in
+        <strong>New Jersey, Michigan, and Pennsylvania</strong>. In all other
+        states, you can legally enjoy <strong>sweepstakes casinos</strong>.
+      </p>
+
+      <div class="reveal" id="hero-reveal">
+        <div class="reveal__inner">
+          <p class="reveal__intro">
+            Our expert analysis focuses on what matters most to US players,
+            addressing popular searches such as <em>“best online slots USA,”</em>
+            <em>“online casinos with fast payouts,”</em> and
+            <em>“crypto casinos for US players.”</em> Here’s what our in-depth
+            reviews cover:
+          </p>
+
+          <ul class="points">
+            {points.map((p) => (
+              <li>
+                <span class="points__mark" aria-hidden="true"></span>
+                <span><strong>{p.label}:</strong> {p.body}</span>
+              </li>
+            ))}
+          </ul>
+
+          <p class="reveal__outro">
+            Explore our expert-reviewed list of <strong>legal gambling sites</strong>
+            and start playing real-money casino games today.
+          </p>
+        </div>
+      </div>
+
+      <button class="toggle" id="hero-toggle" aria-expanded="false" aria-controls="hero-reveal">
+        <span class="toggle__label">Show more</span>
+        <svg class="toggle__chev" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+          <path d="M3.5 6l4.5 4.5L12.5 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+
+      <div class="hero__cta">
+        <a class="btn btn-gold" href="#rankings">See the ranked list</a>
+        <a class="btn btn-ghost" href="#method">How we score</a>
+      </div>
+    </div>
+
+    <aside class="verdict" aria-label="Editor's number one pick">
+      <div class="verdict__seal" aria-hidden="true">
+        <svg viewBox="0 0 96 96" width="84" height="84">
+          <defs>
+            <path id="ring" d="M48,48 m-34,0 a34,34 0 1,1 68,0 a34,34 0 1,1 -68,0" />
+          </defs>
+          <circle cx="48" cy="48" r="46" fill="none" stroke="#C8A24B" stroke-width="1"/>
+          <circle cx="48" cy="48" r="40" fill="#0B3D2E" />
+          <circle cx="48" cy="48" r="40" fill="none" stroke="#E4CB86" stroke-width="1" stroke-dasharray="2 3"/>
+          <text font-family="Fraunces, serif" font-size="29" font-weight="700" fill="#E4CB86"
+                text-anchor="middle" x="48" y="45">#1</text>
+          <text font-family="Inter, sans-serif" font-size="8" letter-spacing="1.5" fill="#E4CB86"
+                text-anchor="middle" x="48" y="60">PICK</text>
+          <text font-size="7.6" fill="#C8A24B" font-family="Inter, sans-serif" letter-spacing="2.4">
+            <textPath href="#ring" startOffset="1%">EDITOR’S CHOICE · JUNE 2026 · AURUM ·</textPath>
+          </text>
+        </svg>
+      </div>
+
+      <div class="verdict__head">
+        <p class="verdict__kicker">Top rated this month</p>
+        <h2 class="verdict__name">{topPick.name}</h2>
+      </div>
+
+      <div class="verdict__score">
+        <div class="score-chip"><span>{topPick.score}</span></div>
+        <div class="verdict__rating">
+          <span class="verdict__stars" aria-hidden="true">★★★★★</span>
+          <span class="verdict__scorelabel">Exceptional · {topPick.score}/10</span>
+        </div>
+      </div>
+
+      <div class="verdict__bonus">
+        <span class="verdict__bonuslabel">Welcome bonus</span>
+        <strong class="verdict__bonusval">{topPick.bonus}</strong>
+        <span class="verdict__bonusextra">{topPick.extra}</span>
+      </div>
+
+      <ul class="verdict__list">
+        {topPick.highlights.map((h) => (
+          <li>
+            <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true">
+              <path d="M3 8.5l3 3 7-7.5" fill="none" stroke="#0E5C43" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            {h}
+          </li>
+        ))}
+      </ul>
+
+      <a class="btn btn-gold verdict__btn" href="#rankings">Claim bonus</a>
+      <p class="verdict__terms">T&amp;Cs apply · 18+ · Play responsibly</p>
+    </aside>
+  </div>
+</section>
+
+<style>
+  .hero {
+    position: relative;
+    overflow: hidden;
+    padding-block: clamp(40px, 6vw, 46px);
+  }
+  .hero__felt {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(120% 90% at 88% 8%, rgba(14,92,67,.10), transparent 55%),
+      radial-gradient(80% 70% at 95% 100%, rgba(200,162,75,.10), transparent 60%);
+    pointer-events: none;
+  }
+
+  .hero__grid {
+    position: relative;
+    display: grid;
+    grid-template-columns: 1.15fr 0.95fr;
+    gap: clamp(32px, 5vw, 68px);
+    align-items: start;
+  }
+
+  .crumb { font-size: 13px; color: var(--muted-2); margin-bottom: 16px; }
+  .crumb a { color: var(--muted-2); }
+  .crumb a:hover { color: var(--emerald-2); }
+
+  .hero__title {
+    font-size: clamp(34px, 5vw, 60px);
+    line-height: 1.02;
+    letter-spacing: -0.025em;
+    max-width: 16ch;
+  }
+
+  .byline {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 12px;
+    margin-top: 18px;
+    font-size: 14px;
+    color: var(--muted);
+  }
+  .byline strong { color: var(--ink); font-weight: 600; }
+  .byline a { color: var(--emerald-2); font-weight: 600; }
+  .byline a:hover { text-decoration: underline; text-underline-offset: 2px; }
+  .byline__item { display: inline-flex; align-items: center; gap: 6px; }
+  .byline__dot { width: 4px; height: 4px; border-radius: 50%; background: var(--gold); }
+  .verified { display: inline-flex; }
+
+  .hero__lede {
+    margin-top: 22px;
+    font-size: clamp(15.5px, 1.3vw, 17.5px);
+    color: var(--muted);
+    line-height: 1.7;
+    max-width: 58ch;
+  }
+  .hero__lede strong { color: var(--ink); font-weight: 600; }
+
+  /* ---- Expand / collapse ---- */
+  .reveal {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows .38s ease;
+  }
+  .reveal.is-open { grid-template-rows: 1fr; }
+  .reveal__inner {
+    overflow: hidden;
+    opacity: 0;
+    transform: translateY(-4px);
+    transition: opacity .3s ease .05s, transform .3s ease .05s;
+  }
+  .reveal.is-open .reveal__inner { opacity: 1; transform: none; }
+
+  .reveal__intro, .reveal__outro {
+    margin-top: 18px;
+    font-size: 15px;
+    color: var(--muted);
+    line-height: 1.7;
+    max-width: 60ch;
+  }
+  .reveal__intro em { font-style: normal; color: var(--emerald-2); font-weight: 500; }
+  .reveal__outro strong { color: var(--ink); }
+
+  .points { list-style: none; padding: 0; margin: 16px 0 0; display: grid; gap: 12px; }
+  .points li {
+    display: flex;
+    gap: 12px;
+    font-size: 14.5px;
+    color: var(--muted);
+    line-height: 1.62;
+    max-width: 62ch;
+  }
+  .points strong { color: var(--emerald); font-weight: 600; }
+  .points__mark {
+    flex: 0 0 auto;
+    width: 7px; height: 7px;
+    margin-top: 8px;
+    border-radius: 2px;
+    background: linear-gradient(135deg, var(--gold-2), var(--gold));
+    transform: rotate(45deg);
+  }
+
+  .toggle {
+    margin-top: 18px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: none;
+    border: 0;
+    padding: 8px 0;
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--emerald-2);
+  }
+  .toggle:hover { color: var(--emerald); }
+  .toggle__chev { transition: transform .3s ease; }
+  .toggle[aria-expanded="true"] .toggle__chev { transform: rotate(180deg); }
+
+  .hero__cta {
+    margin-top: 28px;
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  /* ---- Verdict card ---- */
+  .verdict {
+    position: relative;
+    background: var(--white);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 30px 28px 26px;
+    box-shadow: var(--shadow-lg);
+    position: sticky;
+    top: 96px;
+  }
+  .verdict::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 5px;
+    border-radius: var(--radius) var(--radius) 0 0;
+    background: linear-gradient(90deg, var(--gold-deep), var(--gold-2), var(--gold));
+  }
+  .verdict__seal {
+    position: absolute;
+    top: -30px;
+    right: 22px;
+    filter: drop-shadow(0 8px 14px rgba(11,61,46,.22));
+  }
+
+  .verdict__kicker {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--gold-deep);
+  }
+  .verdict__name { font-size: 30px; margin-top: 4px; color: var(--emerald); }
+
+  .verdict__score { display: flex; align-items: center; gap: 14px; margin-top: 18px; }
+  .verdict__rating { display: flex; flex-direction: column; }
+  .verdict__stars { color: var(--gold); letter-spacing: 2px; font-size: 17px; }
+  .verdict__scorelabel { font-size: 13px; color: var(--muted); font-weight: 500; }
+
+  .verdict__bonus {
+    margin-top: 20px;
+    background: var(--ivory-2);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+  }
+  .verdict__bonuslabel { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted-2); }
+  .verdict__bonusval { font-family: var(--display); font-size: 22px; color: var(--ink); margin-top: 2px; }
+  .verdict__bonusextra { font-size: 13px; color: var(--emerald-2); font-weight: 600; margin-top: 2px; }
+
+  .verdict__list { list-style: none; padding: 0; margin-top: 18px; display: grid; gap: 9px; }
+  .verdict__list li { display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--ink); }
+
+  .verdict__btn { width: 100%; margin-top: 20px; }
+  .verdict__terms { text-align: center; font-size: 11.5px; color: var(--muted-2); margin-top: 10px; }
+
+  @media (max-width: 880px) {
+    .hero__grid { grid-template-columns: 1fr; }
+    .verdict { position: static; max-width: 460px; }
+  }
+</style>
+
+<script is:inline>
+  (function () {
+    var toggle = document.getElementById('hero-toggle');
+    var reveal = document.getElementById('hero-reveal');
+    if (!toggle || !reveal) return;
+    var label = toggle.querySelector('.toggle__label');
+    toggle.addEventListener('click', function () {
+      var open = reveal.classList.toggle('is-open');
+      toggle.setAttribute('aria-expanded', String(open));
+      label.textContent = open ? 'Show less' : 'Show more';
+    });
+  })();
+</script>

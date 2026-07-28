@@ -1,0 +1,150 @@
+---
+const base = 'https://usplayercheck.com';
+
+const tabs = [
+  {
+    id: 'games',
+    label: 'Casino Games',
+    heading: 'Learn the games before you play',
+    body: 'Learn the rules and strategies for popular games — including slots, blackjack, and roulette — in our real money casino games guide. We break down how each game works and where to find it run fairly.',
+    chips: ['Slots', 'Blackjack', 'Roulette'],
+    href: `${base}/casino-games/`,
+  },
+  {
+    id: 'payments',
+    label: 'Payments',
+    heading: 'Move your money with no surprises',
+    body: 'Compare casino payment methods, processing speeds, and withdrawal limits in our online casino payment guide. We measure how long cashouts really take across cards, e-wallets and crypto.',
+    chips: ['Processing speeds', 'Withdrawal limits', 'Crypto'],
+    href: `${base}/online-casinos/`,
+  },
+  {
+    id: 'bonuses',
+    label: 'Bonuses',
+    heading: 'Bonuses, with the mechanics explained',
+    body: 'Identify the best casino bonuses and understand the mechanics of free spins and turnover requirements. We translate the fine print into plain numbers so you can see a bonus’s real value.',
+    chips: ['Welcome offers', 'Free spins', 'Turnover requirements'],
+    href: `${base}/casino-bonuses/`,
+  },
+];
+---
+
+<section class="explore section" id="categories">
+  <div class="wrap">
+    <header class="explore__head">
+      <span class="eyebrow">Explore online casino resources</span>
+      <h2 class="explore__title">Guides that simplify online gaming</h2>
+      <p class="explore__sub">
+        Our guides simplify the complexities of digital gaming, from technical
+        payment processing to bonus mechanics. Pick a topic to get started.
+      </p>
+    </header>
+
+    <div class="tabs" role="tablist" aria-label="Categories">
+      {tabs.map((t, i) => (
+        <button
+          type="button"
+          class={`tab ${i === 0 ? 'is-active' : ''}`}
+          role="tab"
+          id={`tab-${t.id}`}
+          aria-controls={`panel-${t.id}`}
+          aria-selected={i === 0 ? 'true' : 'false'}
+          data-tab={t.id}
+        >{t.label}</button>
+      ))}
+    </div>
+
+    {tabs.map((t, i) => (
+      <div
+        class={`panel ${i === 0 ? 'is-active' : ''}`}
+        role="tabpanel"
+        id={`panel-${t.id}`}
+        aria-labelledby={`tab-${t.id}`}
+        hidden={i !== 0}
+      >
+        <div class="panel__text">
+          <h3 class="panel__heading">{t.heading}</h3>
+          <p class="panel__body">{t.body}</p>
+          <ul class="panel__chips">
+            {t.chips.map((c) => <li>{c}</li>)}
+          </ul>
+          <a class="btn btn-emerald panel__cta" href={t.href}>Explore {t.label.toLowerCase()}</a>
+        </div>
+      </div>
+    ))}
+  </div>
+</section>
+
+<style>
+  .explore__head { max-width: 100%; }
+  .explore__title { font-size: clamp(28px, 3.6vw, 44px); margin-top: 12px; }
+  .explore__sub { margin-top: 14px; color: var(--muted); font-size: 15.5px; line-height: 1.65; }
+
+  .tabs {
+    display: flex; flex-wrap: wrap; gap: 10px;
+    margin-top: 28px;
+  }
+  .tab {
+    font-family: var(--body); font-weight: 600; font-size: 14.5px;
+    padding: 11px 22px; border-radius: 999px;
+    border: 1px solid var(--line-2); background: var(--white); color: var(--muted);
+    transition: all .18s ease;
+  }
+  .tab:hover { border-color: var(--emerald); color: var(--emerald); }
+  .tab.is-active { background: var(--emerald); border-color: var(--emerald); color: #fff; }
+
+  .panel { display: none; margin-top: 24px; }
+  .panel.is-active { display: block; animation: fade .35s ease; }
+  @keyframes fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+  .panel__text {
+    background: var(--white);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: clamp(24px, 3vw, 38px);
+    box-shadow: var(--shadow-sm);
+    max-width: 100%;
+  }
+  .panel__heading { font-size: clamp(22px, 2.6vw, 30px); color: var(--emerald); }
+  .panel__body { margin-top: 14px; font-size: 15.5px; color: var(--muted); line-height: 1.7; }
+  .panel__chips { list-style: none; padding: 0; margin: 20px 0 0; display: flex; flex-wrap: wrap; gap: 9px; }
+  .panel__chips li {
+    font-family: var(--body); font-size: 13px; font-weight: 600; color: var(--emerald-2);
+    background: var(--ivory-2); border: 1px solid var(--line); border-radius: 999px; padding: 7px 14px;
+  }
+  .panel__cta { margin-top: 24px; }
+
+  @media (prefers-reduced-motion: reduce) { .panel.is-active { animation: none; } }
+</style>
+
+<script is:inline>
+  function initExploreTabs() {
+    const root = document.getElementById('categories');
+    if (!root) return;
+    const tabs = root.querySelectorAll('.tab');
+    const panels = root.querySelectorAll('.panel');
+
+    tabs.forEach((tab) => {
+      // Prevent double-binding when re-run by view transitions
+      if (tab.dataset.bound === '1') return;
+      tab.dataset.bound = '1';
+
+      tab.addEventListener('click', () => {
+        const id = tab.getAttribute('data-tab');
+        tabs.forEach((t) => {
+          const on = t === tab;
+          t.classList.toggle('is-active', on);
+          t.setAttribute('aria-selected', String(on));
+        });
+        panels.forEach((p) => {
+          const on = p.id === `panel-${id}`;
+          p.classList.toggle('is-active', on);
+          p.hidden = !on;
+        });
+      });
+    });
+  }
+
+  initExploreTabs();
+  document.addEventListener('astro:page-load', initExploreTabs);
+</script>

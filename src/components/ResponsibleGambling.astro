@@ -1,0 +1,108 @@
+---
+const tools = [
+  {
+    icon: 'help',
+    title: 'Professional support',
+    body: 'Visit organizations such as Gamblers Anonymous or the National Council on Problem Gambling for free, confidential assistance.',
+    cta: 'Find support',
+    href: '/responsible-gambling/',
+    style: 'gold',
+  },
+  {
+    icon: 'lock',
+    title: 'Self-exclusion',
+    body: 'Access casino self-exclusion tools to restrict your access to gambling platforms. Read our self-exclusion guide to understand the implementation process.',
+    cta: 'Read the guide',
+    href: '/self-exclusion/',
+    style: 'ghost',
+  },
+  {
+  icon: 'slots',
+  title: 'Player community',
+  body: 'Big win casino slots are one of the most popular and exciting real money slot games in any casino. They offer the chance to win huge jackpots with a small bet and are easy to play.',
+  cta: 'Visit the community',
+  href: '/how-to-win-big-at-casino-slots/',
+  style: 'emerald',
+},
+];
+
+const icons = {
+  help: '<path d="M14 25c6-3 9-7 9-12V6l-9-3-9 3v7c0 5 3 9 9 12z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M11.5 12.5a2.5 2.5 0 113.4 2.3c-.6.3-.9.7-.9 1.4v.6M14 19.2v.1" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>',
+  lock: '<rect x="6" y="12" width="16" height="11" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M9.5 12V9a4.5 4.5 0 019 0v3" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M14 16v3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>',
+  slots: '<rect x="6" y="5" width="16" height="18" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M9 10h3M13 10h3M17 10h2M9 15h3M13 15h3M17 15h2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M22 8l2-2M24 6v8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>',
+};
+---
+
+<section class="rg section" id="responsible">
+  <div class="wrap">
+    <div class="rg__banner">
+      <div class="rg__banner-icon" aria-hidden="true">
+        <svg viewBox="0 0 48 48" width="56" height="56">
+          <path d="M24 4l16 6v12c0 10-6.8 17.6-16 21-9.2-3.4-16-11-16-21V10l16-6z" fill="none" stroke="#E4CB86" stroke-width="2" stroke-linejoin="round"/>
+          <path d="M24 16v9M24 30v.1" stroke="#E4CB86" stroke-width="2.6" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div>
+        <h2 class="rg__title">Responsible gambling</h2>
+        <p class="rg__lede">
+          Gambling must remain a form of entertainment. If you feel your habits
+          are becoming problematic, use the responsible gambling tools and support
+          services below. Free, confidential help is available 24/7.
+        </p>
+      </div>
+    </div>
+
+    <h3 class="rg__subhead">Responsible gambling tools and resources</h3>
+
+    <div class="rg__grid">
+      {tools.map((t) => (
+        <article class={`tool tool--${t.style}`}>
+          <span class="tool__icon" set:html={`<svg viewBox="0 0 28 28" width="30" height="30">${icons[t.icon]}</svg>`} />
+          <h4 class="tool__title">{t.title}</h4>
+          <p class="tool__body">{t.body}</p>
+          <a class={`btn tool__btn ${t.style === 'gold' ? 'btn-gold' : t.style === 'emerald' ? 'btn-emerald' : 'btn-ghost'}`} href={t.href}>{t.cta}</a>
+        </article>
+      ))}
+    </div>
+  </div>
+</section>
+
+<style>
+  .rg__banner {
+    display: flex; gap: 22px; align-items: center;
+    background: var(--emerald);
+    border-radius: var(--radius);
+    padding: clamp(24px, 3vw, 36px);
+    color: #fff; position: relative; overflow: hidden;
+  }
+  .rg__banner::after {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background: radial-gradient(60% 120% at 100% 0%, rgba(228,203,134,.14), transparent 60%);
+  }
+  .rg__banner-icon { flex: 0 0 auto; position: relative; }
+  .rg__title { color: var(--gold-2); font-size: clamp(24px, 3vw, 34px); position: relative; }
+  .rg__lede { margin-top: 10px; font-size: 15px; line-height: 1.65; color: rgba(255,255,255,.82); max-width: 80ch; position: relative; }
+  .rg__lede a { color: var(--gold-2); font-weight: 600; text-decoration: underline; text-underline-offset: 2px; }
+
+  .rg__subhead { font-size: 20px; color: var(--emerald); margin: 34px 0 18px; }
+  .rg__grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+
+  .tool {
+    display: flex; flex-direction: column;
+    background: var(--white); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 26px 24px; box-shadow: var(--shadow-sm);
+    transition: transform .2s ease, box-shadow .2s ease;
+  }
+  .tool:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); }
+  .tool__icon {
+    width: 50px; height: 50px; display: grid; place-items: center;
+    border-radius: 13px; background: var(--ivory-2); color: var(--emerald-2);
+    border: 1px solid var(--line); margin-bottom: 16px;
+  }
+  .tool--emerald .tool__icon { background: var(--emerald); color: var(--gold-2); border-color: var(--emerald); }
+  .tool__title { font-size: 20px; color: var(--emerald); }
+  .tool__body { margin-top: 10px; font-size: 14.5px; color: var(--muted); line-height: 1.6; }
+  .tool__btn { margin-top: 20px; align-self: stretch; }
+
+  @media (max-width: 880px) { .rg__grid { grid-template-columns: 1fr; max-width: 560px; } .rg__banner { flex-direction: column; align-items: flex-start; } }
+</style>

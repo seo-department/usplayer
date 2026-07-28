@@ -1,0 +1,404 @@
+---
+const base = ""
+
+const feature = {
+  label: "Online Casinos",
+  desc: "Our ranked list of the best real-money online casinos in the US.",
+  href: `${base}/online-casinos/`,
+}
+
+const blocks = [
+  {
+    label: "Reviews",
+    desc: "In-depth, real-money casino reviews.",
+    href: `${base}/casino-reviews/`,
+    icon: "review",
+  },
+  {
+    label: "Games",
+    desc: "Slots, blackjack, roulette & live dealer.",
+    href: `${base}/casino-games/`,
+    icon: "games",
+  },
+  {
+    label: "Bonuses",
+    desc: "Welcome offers, free spins & no-deposit.",
+    href: `${base}/casino-bonuses/`,
+    icon: "bonus",
+  },
+  {
+    label: "News",
+    desc: "The latest from US online gambling.",
+    href: `${base}/news/`,
+    icon: "news",
+  },
+]
+
+const icons: Record<string, string> = {
+  casino:
+    '<path d="M4 7h16v12H4z" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="9" cy="11" r="1.3" fill="currentColor"/><circle cx="15" cy="15" r="1.3" fill="currentColor"/><circle cx="12" cy="13" r="1.3" fill="currentColor"/>',
+  review:
+    '<path d="M6 4h9l4 4v12H6z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M9 12h6M9 15h4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>',
+  games:
+    '<rect x="4" y="7" width="16" height="10" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M8 12h2.5M9.25 10.75v2.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="15.5" cy="11" r="1" fill="currentColor"/><circle cx="16.5" cy="13.5" r="1" fill="currentColor"/>',
+  bonus:
+    '<path d="M5 9h14v3H5zM12 9v10M6 12v7h12v-7" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M12 9s-1-4-3-4-2 3 0 4M12 9s1-4 3-4 2 3 0 4" fill="none" stroke="currentColor" stroke-width="1.6"/>',
+  news: '<rect x="4" y="5" width="16" height="14" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M7 9h6M7 12h6M7 15h4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>',
+}
+
+const arrow =
+  '<path d="M4 10h11M11 5.5L15.5 10 11 14.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>'
+---
+
+<section class="intro" id="top">
+  <div class="intro__felt" aria-hidden="true"></div>
+  <div class="wrap intro__grid">
+    <div class="intro__copy">
+      <span class="eyebrow">Independent US casino review platform</span>
+      <h1 class="intro__title">
+        Expert online casino reviews for safe real-money play
+      </h1>
+
+      <nav class="toc toc--hero" aria-label="Table of contents">
+        <button class="toc__toggle" type="button" aria-expanded="false">
+          <span>Table of Contents</span>
+          <span class="toc__badge">Show</span>
+        </button>
+        <ul class="toc__list" hidden>
+          <li><a href="#casinos">Browse top casinos</a></li>
+          <li><a href="#info">Why trust us</a></li>
+          <li><a href={feature.href}>{feature.label}</a></li>
+          {
+            blocks.map(b => (
+              <li>
+                <a href={b.href}>{b.label}</a>
+              </li>
+            ))
+          }
+        </ul>
+      </nav>
+
+      <p class="intro__lede">
+        US Player Check is an independent review platform that audits online
+        casinos for safety, payout speed, and licensing compliance. We verify
+        site security and fairness — testing every platform manually — so
+        players access only high-quality gambling environments.
+      </p>
+      <div class="intro__cta">
+        <a class="btn btn-gold" href="#casinos">Browse top casinos</a>
+        <a class="btn btn-ghost" href="#info">Why trust us</a>
+      </div>
+    </div>
+
+    <nav class="intro__blocks" aria-label="Explore the site">
+      <a class="block block--feature" href={feature.href}>
+        <span
+          class="block__icon"
+          set:html={`<svg viewBox="0 0 24 24" fill="none">${icons.casino}</svg>`}
+        />
+        <span class="block__text">
+          <span class="block__label">{feature.label}</span>
+          <span class="block__desc">{feature.desc}</span>
+        </span>
+        <span class="block__arrow" set:html={arrow} />
+      </a>
+
+      <div class="intro__grid2">
+        {
+          blocks.map(b => (
+            <a class="block" href={b.href}>
+              <span
+                class="block__icon"
+                set:html={`<svg viewBox="0 0 24 24" fill="none">${icons[b.icon]}</svg>`}
+              />
+              <span class="block__text">
+                <span class="block__label">{b.label}</span>
+                <span class="block__desc">{b.desc}</span>
+              </span>
+              <span class="block__arrow" set:html={arrow} />
+            </a>
+          ))
+        }
+      </div>
+    </nav>
+  </div>
+</section>
+
+<style>
+  .intro {
+    position: relative;
+    overflow: hidden;
+    padding-block: clamp(44px, 7vw, 88px);
+    background: var(--emerald);
+    color: #fff;
+  }
+  .intro__felt {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(
+        120% 90% at 88% -10%,
+        rgba(58, 87, 192, 0.55),
+        transparent 55%
+      ),
+      radial-gradient(
+        60% 60% at 100% 100%,
+        rgba(200, 162, 75, 0.12),
+        transparent 60%
+      );
+  }
+  .intro__grid {
+    position: relative;
+    display: grid;
+    grid-template-columns: 1fr 1.02fr;
+    gap: clamp(32px, 5vw, 64px);
+    align-items: center;
+  }
+
+  .intro__copy .eyebrow {
+    color: var(--gold-2);
+  }
+  .intro__title {
+    font-size: clamp(36px, 5.2vw, 62px);
+    line-height: 1;
+    letter-spacing: -0.03em;
+    margin-top: 18px;
+    max-width: 13ch;
+    color: #fff;
+  }
+  .intro__lede {
+    margin-top: 22px;
+    font-size: clamp(16px, 1.35vw, 18px);
+    color: rgba(255, 255, 255, 0.82);
+    line-height: 1.7;
+    max-width: 48ch;
+  }
+  .intro__cta {
+    margin-top: 28px;
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .intro__cta .btn-ghost {
+    background: transparent;
+    color: #fff;
+    border: 1.5px solid rgba(255, 255, 255, 0.5);
+  }
+  .intro__cta .btn-ghost:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.8);
+    color: #fff;
+  }
+
+  .toc--hero {
+    margin: 22px 0 0;
+    border-radius: 12px;
+    overflow: hidden;
+    max-width: 480px;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+  }
+  .toc--hero .toc__toggle {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 18px;
+    background: linear-gradient(90deg, #6d5ff0, #3a2fc9);
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    font-weight: 700;
+    font-size: 15px;
+  }
+  .toc--hero .toc__badge {
+    font-size: 12px;
+    font-weight: 700;
+    background: rgba(255, 255, 255, 0.18);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    border-radius: 999px;
+    padding: 4px 12px;
+  }
+  .toc--hero .toc__list {
+    list-style: none;
+    margin: 0;
+    padding: 14px 18px;
+    background: #fff;
+    display: grid;
+    gap: 8px;
+  }
+  .toc--hero .toc__list[hidden] {
+    display: none;
+  }
+  .toc--hero .toc__list a {
+    color: var(--emerald-2);
+    text-decoration: none;
+    font-size: 14px;
+  }
+  .toc--hero .toc__list a:hover {
+    text-decoration: underline;
+  }
+
+  /* link blocks */
+  .intro__blocks {
+    display: grid;
+    gap: 12px;
+  }
+  .intro__grid2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .block {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: var(--white);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 16px 18px;
+    box-shadow: var(--shadow-sm);
+    transition:
+      transform 0.18s ease,
+      box-shadow 0.2s ease,
+      border-color 0.2s ease;
+  }
+  .block:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+    border-color: var(--line-2);
+  }
+
+  .block__icon {
+    flex: 0 0 auto;
+    width: 42px;
+    height: 42px;
+    display: grid;
+    place-items: center;
+    border-radius: 11px;
+    background: var(--ivory-2);
+    color: var(--emerald-2);
+    border: 1px solid var(--line);
+  }
+  .block__icon :global(svg) {
+    width: 22px;
+    height: 22px;
+  }
+  .block__text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+  .block__label {
+    font-family: var(--display);
+    font-weight: 600;
+    font-size: 18px;
+    color: var(--ink);
+  }
+  .block__desc {
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.35;
+  }
+  .block__arrow {
+    margin-left: auto;
+    color: var(--muted-2);
+    flex: 0 0 auto;
+    transition:
+      color 0.18s ease,
+      transform 0.18s ease;
+  }
+  .block__arrow :global(svg) {
+    width: 19px;
+    height: 19px;
+  }
+  .block:hover .block__arrow {
+    color: var(--gold-deep);
+    transform: translateX(3px);
+  }
+
+  .block--feature {
+    border-color: var(--gold);
+    box-shadow:
+      0 0 0 1px var(--gold) inset,
+      var(--shadow-md);
+    background: linear-gradient(180deg, #fffdf7, var(--white));
+    padding: 20px 20px;
+  }
+  .block--feature .block__icon {
+    background: var(--emerald);
+    color: var(--gold-2);
+    border-color: var(--emerald);
+  }
+  .block--feature .block__label {
+    font-size: 21px;
+    color: var(--emerald);
+  }
+
+  @media (max-width: 880px) {
+    .intro__grid {
+      grid-template-columns: 1fr;
+    }
+    .intro__blocks {
+      max-width: 560px;
+    }
+  }
+  @media (max-width: 460px) {
+    .intro__grid2 {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+
+<script>
+  function initTocToggles() {
+    document.querySelectorAll(".toc__toggle").forEach((btn) => {
+      if (btn.dataset.tocBound === "true") return;
+      btn.dataset.tocBound = "true";
+      
+      btn.addEventListener("click", () => {
+        const list = btn.parentElement.querySelector(".toc__list");
+        if (!list) return;
+        
+        const isHidden = list.hasAttribute("hidden");
+        isHidden ? list.removeAttribute("hidden") : list.setAttribute("hidden", "");
+        btn.setAttribute("aria-expanded", String(isHidden));
+        
+        const badge = btn.querySelector(".toc__badge");
+        if (badge) badge.textContent = isHidden ? "Hide" : "Show";
+      });
+    });
+  }
+
+  // UPDATED: Intercept ALL same-page anchor links so they scroll without touching the URL bar
+  function initAnchorScroll() {
+    // Select all links where the href starts with "#"
+    document.querySelectorAll('a[href^="#"]').forEach((link) => {
+      if (link.dataset.scrollBound === "true") return;
+      link.dataset.scrollBound = "true";
+
+      link.addEventListener("click", (e) => {
+        const href = link.getAttribute("href");
+        if (!href || href === "#") return; // Ignore empty or top-level anchors
+
+        const target = document.querySelector(href);
+        if (!target) return; // If no matching section exists, allow default behavior
+
+        e.preventDefault(); // Stop the URL from changing
+        target.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    });
+  }
+
+  function initAll() {
+    initTocToggles();
+    initAnchorScroll();
+  }
+
+  if (document.readyState !== "loading") initAll();
+  else document.addEventListener("DOMContentLoaded", initAll);
+  document.addEventListener("astro:page-load", initAll);
+</script>
