@@ -4,21 +4,18 @@ import Nav from "../components/Nav.astro"
 import Footer from "../components/Footer.astro"
 import Breadcrumbs from "../components/Breadcrumbs.astro"
 
-const STAGING = "https://wordpress-362361-6550593.cloudwaysapps.com"
+const STAGING = "https://wordpress-1301750-6506622.cloudwaysapps.com"
 
 export async function getStaticPaths() {
-  const STAGING = "https://wordpress-362361-6550593.cloudwaysapps.com"
-  
-  // Try to use the env var, but if it's missing, default to your staging URL.
-  // This prevents the build from ever crashing!
+  const STAGING = "https://wordpress-1301750-6506622.cloudwaysapps.com"
+
   const endpoint = import.meta.env.WP_GRAPHQL_URL || `${STAGING}/graphql`
-  
+
   console.log("[wp] Fetching data from:", endpoint)
 
   const MEDIA = (import.meta.env.WP_MEDIA_URL ?? STAGING).replace(/\/$/, "")
   const mediaUrl = u => (u ? u.replaceAll(STAGING, MEDIA) : u)
 
-  // browser-like User-Agent, returning an HTML block page instead of JSON.
   const safeHeaders = {
     "Content-Type": "application/json",
     "User-Agent":
@@ -34,9 +31,14 @@ export async function getStaticPaths() {
   featuredImage { node { sourceUrl altText } }
   author { node { name description url avatar { url } } }`
 
+  // Temporarily removed the reviewFields sub-query — it references a field
+  // name ("reviewFields") that doesn't exist on the CasinoReview type in
+  // WPGraphQL, which was crashing the entire build and causing every page
+  // (not just reviews) to 404. Re-add once we confirm the correct ACF
+  // field group name from the WPGraphQL schema docs.
   const REVIEW_FIELDS = `title slug uri date modified content
-    featuredImage { node { sourceUrl altText } }
-    reviewFields { rating promoHeadline promoDescription }`
+  featuredImage { node { sourceUrl altText } }
+  author { node { name description url avatar { url } } }`
 
   async function fetchAll(root, fields) {
     const items = []
@@ -82,12 +84,9 @@ export async function getStaticPaths() {
     fetchAll("casinoReviews", REVIEW_FIELDS),
   ])
   console.log(
-    "[wp] fetched posts:",
-    posts.length,
-    " pages:",
-    pages.length,
-    " reviews:",
-    reviews.length,
+    "[wp] fetched posts:", posts.length,
+    " pages:", pages.length,
+    " reviews:", reviews.length,
   )
 
   const clean = (uri, slug) => (uri || `/${slug}/`).replace(/^\/+|\/+$/g, "")
@@ -376,7 +375,9 @@ const reviewSchema = isReview
         name: title.replace(/\s*review.*$/i, "").trim(),
         ...(heroImage ? { image: heroImage } : {}),
       },
-      author: { "@type": "Organization", name: "US Player Check" },
+      author: authorPerson
+        ? { "@id": authorPerson["@id"] }
+        : { "@type": "Organization", name: "US Player Check" },
       publisher: { "@type": "Organization", name: "US Player Check" },
       ...(rating != null
         ? {
