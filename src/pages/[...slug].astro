@@ -334,6 +334,16 @@ const authorPerson = author?.name
       ...(authorSlug ? { url: `${siteUrl}/about-us/${authorSlug}/` } : {}),
       ...(authorAvatar ? { image: authorAvatar } : {}),
       ...(author.description ? { description: strip(author.description) } : {}),
+      
+      // --- NEW RICH PERSON SCHEMA FIELDS ---
+      jobTitle: "Content Contributor", // Feel free to adjust this fallback title
+      worksFor: {
+        "@type": "Organization",
+        name: "US Player Check",
+        url: siteUrl
+      },
+      // Automatically populates social media and website links into the schema
+      ...(socials.length > 0 ? { sameAs: socials.map(s => s.url) } : {})
     }
   : null
 
