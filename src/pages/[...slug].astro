@@ -7,10 +7,9 @@ import Breadcrumbs from "../components/Breadcrumbs.astro"
 const STAGING = "https://wordpress-362361-6550593.cloudwaysapps.com"
 
 export async function getStaticPaths() {
-  const endpoint = import.meta.env.WP_GRAPHQL_URL
+const endpoint = import.meta.env.WP_GRAPHQL_URL
 if (!endpoint) {
-  console.warn("[wp] WP_GRAPHQL_URL is not set")
-  return [] 
+  throw new Error("FATAL: WP_GRAPHQL_URL environment variable is missing! The build cannot continue without it.")
 }
 
   const STAGING = "https://wordpress-362361-6550593.cloudwaysapps.com"
