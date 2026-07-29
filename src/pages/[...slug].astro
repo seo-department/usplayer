@@ -12,6 +12,7 @@ if (!endpoint) {
   throw new Error("FATAL: WP_GRAPHQL_URL environment variable is missing! The build cannot continue without it.")
 }
 
+
   const STAGING = "https://wordpress-362361-6550593.cloudwaysapps.com"
   const MEDIA = (import.meta.env.WP_MEDIA_URL ?? STAGING).replace(/\/$/, "")
   const mediaUrl = u => (u ? u.replaceAll(STAGING, MEDIA) : u)
