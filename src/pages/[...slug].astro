@@ -7,13 +7,13 @@ import Breadcrumbs from "../components/Breadcrumbs.astro"
 const STAGING = "https://wordpress-362361-6550593.cloudwaysapps.com"
 
 export async function getStaticPaths() {
-const endpoint = import.meta.env.WP_GRAPHQL_URL
-if (!endpoint) {
-  throw new Error("FATAL: WP_GRAPHQL_URL environment variable is missing! The build cannot continue without it.")
-}
-
-
   const STAGING = "https://wordpress-362361-6550593.cloudwaysapps.com"
+  
+  // Try to use the environment variable, but if it's missing, use your staging URL automatically.
+  const endpoint = import.meta.env.WP_GRAPHQL_URL || `${STAGING}/graphql`
+
+
+
   const MEDIA = (import.meta.env.WP_MEDIA_URL ?? STAGING).replace(/\/$/, "")
   const mediaUrl = u => (u ? u.replaceAll(STAGING, MEDIA) : u)
 
