@@ -1,4 +1,5 @@
 User-agent: *
-Allow: /
+Disallow: /play/
+Disallow: /play-now/
 
-Sitemap: https://usplayercheck.com/sitemap-index.xml
+Sitemap: https://usplayercheck.com/sitemap_index.xml

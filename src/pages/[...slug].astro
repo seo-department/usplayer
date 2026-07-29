@@ -8,10 +8,10 @@ const STAGING = "https://wordpress-362361-6550593.cloudwaysapps.com"
 
 export async function getStaticPaths() {
   const endpoint = import.meta.env.WP_GRAPHQL_URL
-  if (!endpoint) {
-    console.warn("[wp] WP_GRAPHQL_URL is not set")
-    return []
-  }
+if (!endpoint) {
+  console.warn("[wp] WP_GRAPHQL_URL is not set")
+  return [] 
+}
 
   const STAGING = "https://wordpress-362361-6550593.cloudwaysapps.com"
   const MEDIA = (import.meta.env.WP_MEDIA_URL ?? STAGING).replace(/\/$/, "")
@@ -30,7 +30,8 @@ export async function getStaticPaths() {
     author { node { name description url avatar { url } } }`
 
   const PAGE_FIELDS = `title slug uri date modified content isFrontPage
-    featuredImage { node { sourceUrl altText } }`
+  featuredImage { node { sourceUrl altText } }
+  author { node { name description url avatar { url } } }`
 
   const REVIEW_FIELDS = `title slug uri date modified content
     featuredImage { node { sourceUrl altText } }`
@@ -330,12 +331,14 @@ const authorPerson = author?.name
         : `${canonical}#author`,
       name: author.name,
       ...(authorSlug ? { url: `${siteUrl}/about-us/${authorSlug}/` } : {}),
-      ...(author.avatar?.url ? { image: mediaUrl(author.avatar.url) } : {}),
+      ...(authorAvatar ? { image: authorAvatar } : {}),
       ...(author.description ? { description: strip(author.description) } : {}),
     }
   : null
 
-const articleSchema = isPost
+const isPage = type === "page"
+
+const articleSchema = (isPost || isPage)
   ? {
       "@type": "Article",
       "@id": `${canonical}#article`,
@@ -661,7 +664,7 @@ const schemaGraph = {
           </div>
         )}
       </article>
-      
+
     ) : (
       <article class="entry">
         <header class="ghero">

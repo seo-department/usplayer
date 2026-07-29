@@ -1,17 +1,6 @@
 ---
 // Pass an array of { label, href } crumbs. The last one renders as plain text (current page).
 const { items = [] } = Astro.props;
-
-const schema = {
-  '@context': 'https://schema.org',
-  '@type': 'BreadcrumbList',
-  itemListElement: items.map((c, i) => ({
-    '@type': 'ListItem',
-    position: i + 1,
-    name: c.label,
-    ...(c.href ? { item: new URL(c.href, Astro.site).toString() } : {}),
-  })),
-};
 ---
 
 {items.length > 1 && (
@@ -32,8 +21,6 @@ const schema = {
     </div>
   </nav>
 )}
-
-<script type="application/ld+json" set:html={JSON.stringify(schema)} />
 
 <style>
   .crumbs { background: var(--white); border-bottom: 1px solid var(--line); }
