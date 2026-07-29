@@ -7,18 +7,14 @@ import Breadcrumbs from "../components/Breadcrumbs.astro"
 const STAGING = "https://wordpress-362361-6550593.cloudwaysapps.com"
 
 export async function getStaticPaths() {
-  const endpoint = import.meta.env.WP_GRAPHQL_URL
-  console.log("[wp] WP_GRAPHQL_URL =", endpoint ? "SET" : "MISSING")
-
-  if (!endpoint) {
-    throw new Error(
-      "[wp] WP_GRAPHQL_URL is not set — check your .env file locally, " +
-      "or your Vercel Project Settings → Environment Variables in production. " +
-      "getStaticPaths() cannot build any pages without it."
-    )
-  }
-
   const STAGING = "https://wordpress-362361-6550593.cloudwaysapps.com"
+  
+  // Try to use the env var, but if it's missing, default to your staging URL.
+  // This prevents the build from ever crashing!
+  const endpoint = import.meta.env.WP_GRAPHQL_URL || `${STAGING}/graphql`
+  
+  console.log("[wp] Fetching data from:", endpoint)
+
   const MEDIA = (import.meta.env.WP_MEDIA_URL ?? STAGING).replace(/\/$/, "")
   const mediaUrl = u => (u ? u.replaceAll(STAGING, MEDIA) : u)
 
@@ -39,7 +35,8 @@ export async function getStaticPaths() {
   author { node { name description url avatar { url } } }`
 
   const REVIEW_FIELDS = `title slug uri date modified content
-    featuredImage { node { sourceUrl altText } }`
+    featuredImage { node { sourceUrl altText } }
+    reviewFields { rating promoHeadline promoDescription }`
 
   async function fetchAll(root, fields) {
     const items = []
