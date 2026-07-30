@@ -6,6 +6,32 @@ import Breadcrumbs from "../components/Breadcrumbs.astro"
 
 const STAGING = "https://wordpress-1301750-6506622.cloudwaysapps.com"
 
+const REVIEWER_BIOS: Record<string, string> = {
+  "Evans Bonnie": "Evans Bonnie is a senior casino industry researcher who verifies licensing details, payout data, and bonus terms to ensure every review meets the site's accuracy standards.",
+  Bonnie: "Evans Bonnie is a senior casino industry researcher who verifies licensing details, payout data, and bonus terms to ensure every review meets the site's accuracy standards.",
+
+  "Charlotte Watts": "Charlotte Watts is a meticulous fact-checker specializing in online gambling regulations, cross-referencing every claim against official licensing bodies before publication.",
+  Charlotte: "Charlotte Watts is a meticulous fact-checker specializing in online gambling regulations, cross-referencing every claim against official licensing bodies before publication.",
+
+  "Jordie Hillcreek": "Jordie Hillcreek is a dedicated fact-checker and casino industry researcher, verifying licensing, payout data, and bonus terms to keep every review accurate and trustworthy.",
+  Jordie: "Jordie Hillcreek is a dedicated fact-checker and casino industry researcher, verifying licensing, payout data, and bonus terms to keep every review accurate and trustworthy.",
+
+  "Margaret Cooper": "Margaret Cooper brings a sharp eye for detail to every review, fact-checking payout speeds, wagering requirements, and licensing information before anything goes live.",
+  Margaret: "Margaret Cooper brings a sharp eye for detail to every review, fact-checking payout speeds, wagering requirements, and licensing information before anything goes live.",
+
+  "Kayla McBrien": "Kayla McBrien is a rare breed of iGaming professional — combining deep technical know-how from her former career as a software engineer with sharp analytical insight as a senior casino analyst.",
+}
+
+const escapeName = (name: string) => name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+
+function injectTooltip(html: string, name: string | null | undefined, bio: string | null | undefined) {
+  if (!html || !name || !bio) return html
+  const re = new RegExp(`(<a[^>]*>)(\\s*${escapeName(name)}\\s*)(</a>)`, "i")
+  return html.replace(re, (_m, open, text, close) =>
+    `<span class="author-tooltip-wrap">${open}${text}${close}<span class="author-tooltip-popup">${bio}</span></span>`,
+  )
+}
+
 export async function getStaticPaths() {
   const STAGING = "https://wordpress-1301750-6506622.cloudwaysapps.com"
 
@@ -201,6 +227,16 @@ const fmtDate = d =>
 
 const title = node.title
 let contentHtml = rewriteMedia(node.content)
+
+if (author?.name && author?.description) {
+  contentHtml = injectTooltip(contentHtml, author.name, strip(author.description))
+}
+
+// Try to match any hardcoded reviewer name that appears in this page's content
+for (const [reviewerName, bio] of Object.entries(REVIEWER_BIOS)) {
+  contentHtml = injectTooltip(contentHtml, reviewerName, bio)
+}
+
 const description = strip(node.excerpt) || strip(node.content).slice(0, 155)
 const heroImage = mediaUrl(node.featuredImage?.node?.sourceUrl ?? null)
 const heroAlt = node.featuredImage?.node?.altText ?? title
@@ -1737,6 +1773,63 @@ const schemaGraph = {
 
   .toc__list[hidden] {
     display: none;
+  }
+
+
+
+
+
+
+  .author-tooltip-wrap {
+    position: relative;
+    display: inline-block;
+  }
+  .author-tooltip-popup {
+    position: absolute;
+    top: 130%;
+    left: 50%;
+    transform: translateX(-50%) translateY(-6px);
+    width: max-content;
+    max-width: 280px;
+    background: var(--white);
+    color: var(--muted);
+    font-size: 0.85rem;
+    font-weight: 400;
+    line-height: 1.5;
+    text-align: left;
+    padding: 14px 16px;
+    border-radius: 10px;
+    box-shadow: var(--shadow-md);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s ease;
+    z-index: 50;
+  }
+  .author-tooltip-popup::after {
+    content: "";
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border-width: 6px;
+    border-style: solid;
+    border-color: transparent transparent var(--white) transparent;
+  }
+  .author-tooltip-wrap:hover .author-tooltip-popup {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(0);
+  }
+  @media (max-width: 600px) {
+    .author-tooltip-popup {
+      max-width: 220px;
+      left: 0;
+      transform: translateY(6px);
+    }
+    .author-tooltip-wrap:hover .author-tooltip-popup {
+      transform: translateY(0);
+    }
   }
 
   /* img.entry__cover { display: none !important; } */
