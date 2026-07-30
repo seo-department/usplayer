@@ -227,6 +227,12 @@ const fmtDate = d =>
 
 const title = node.title
 let contentHtml = rewriteMedia(node.content)
+const description = strip(node.excerpt) || strip(node.content).slice(0, 155)
+const heroImage = mediaUrl(node.featuredImage?.node?.sourceUrl ?? null)
+const heroAlt = node.featuredImage?.node?.altText ?? title
+
+const author = node.author?.node ?? null
+const authorUrl = mediaUrl(author?.url ?? null)
 
 if (author?.name && author?.description) {
   contentHtml = injectTooltip(contentHtml, author.name, strip(author.description))
@@ -236,13 +242,6 @@ if (author?.name && author?.description) {
 for (const [reviewerName, bio] of Object.entries(REVIEWER_BIOS)) {
   contentHtml = injectTooltip(contentHtml, reviewerName, bio)
 }
-
-const description = strip(node.excerpt) || strip(node.content).slice(0, 155)
-const heroImage = mediaUrl(node.featuredImage?.node?.sourceUrl ?? null)
-const heroAlt = node.featuredImage?.node?.altText ?? title
-
-const author = node.author?.node ?? null
-const authorUrl = mediaUrl(author?.url ?? null)
 
 // Manual avatar overrides — keyed by exact WP display name.
 // Paths are root-relative (no domain) so they work on localhost,
