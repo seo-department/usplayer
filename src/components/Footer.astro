@@ -1,62 +1,64 @@
 ---
+interface Props {
+  authorName?: string | null
+  authorAvatar?: string | null
+  authorBio?: string | null
+  authorSlug?: string | null
+  socials?: { network: string; url: string }[]
+}
+
+const {
+  authorName = null,
+  authorAvatar = null,
+  authorBio = null,
+  authorSlug = null,
+  socials = [],
+} = Astro.props
+
+const socialIcon: Record<string, string> = {
+  website:
+    '<path d="M12 3a9 9 0 100 18 9 9 0 000-18zM3 12h18M12 3c2.5 2.5 2.5 15.5 0 18M12 3c-2.5 2.5-2.5 15.5 0 18" fill="none" stroke="currentColor" stroke-width="1.6"/>',
+  twitter:
+    '<path d="M4 4l7 9-7 7h2.5l5.5-5.5L16 20h4l-7.3-9.4L19.5 4H17l-5 5L8 4z" fill="currentColor"/>',
+  facebook:
+    '<path d="M14 7h2V4h-2.5C11 4 10 5.6 10 7.5V9H8v3h2v8h3v-8h2.2l.8-3H13V7.6c0-.4.3-.6.7-.6z" fill="currentColor"/>',
+  linkedin:
+    '<path d="M6 9v9M6 6v.01M10 18v-5a2 2 0 014 0v5M10 12v6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>',
+}
+
 const cols = [
   {
-    title: "Reviews",
-    links: [
-      { label: "Lucky Red casinos", href: "/casino-reviews/lucky-red-casino/" },
-      { label: "Café casinos", href: "/casino-reviews/cafe-casino/" },
-      { label: "Bovada Casino", href: "/casino-reviews/bovada-casino/" }, // was pointing to ignition-casino by mistake — duplicate link fixed
-      { label: "Wild Casino", href: "/casino-reviews/wild-casino/" },
-      {
-        label: "Raging Bull casinos",
-        href: "/casino-reviews/raging-bull-casino/",
-      },
-      { label: "Ignition Casino", href: "/casino-reviews/ignition-casino/" },
-    ],
-  },
-  {
-    title: "Bonuses",
-    links: [
-      { label: "No deposit bonuses", href: "/no-deposit/" },
-      { label: "Free spins", href: "/casino-bonuses/free-spins/" },
-      { label: "Welcome packages", href: "/casino-bonuses/welcome-bonus/" },
-      { label: "Cashback offers", href: "/casino-bonuses/cashback/" },
-      { label: "Bonus calculator", href: "/casino-bonuses/" },
-    ],
-  },
-  {
-    title: "Guides",
+    title: "Player Guides",
     links: [
       {
-        label: "Understanding wagering",
-        href: "/how-to-beat-wagering-requirements/",
+        label: "Responsible Gambling",
+        href: "/responsible-gambling/",
       },
       {
-        label: "Exploring Casino Payments Gateways",
-        href: "/how-gambling-works/",
+        label: "Gambling Laws",
+        href: "/us-gambling-laws/",
       },
       {
-        label: "New Player Casino Tips for Beginners",
-        href: "/new-player-tips/",
+        label: "Gambling Addiction",
+        href: "/gambling-addiction/",
       },
       {
-        label: "Can I Withdraw My Casino Bonus?",
-        href: "/can-i-withdraw-my-casino-bonus/",
+        label: "Sitemap",
+        href: "/sitemap/",
       },
       {
-        label: "How Much Does A Royal Flush Pay in Video Poker?",
-        href: "/how-much-does-a-royal-flush-pay-in-video-poker/",
+        label: "Casino News",
+        href: "/news/",
       },
     ],
   },
   {
-    title: "US Player Check",
+    title: "More Guides",
     links: [
-      { label: "Responsible Gambling", href: "/responsible-gambling/" },
-      { label: "Casino News", href: "/news/" },
-      { label: "Editorial team", href: "/editorial-policy/" },
-      { label: "About US", href: "/about-us/" },
+      { label: "Privacy Policy", href: "/privacy-policy/" },
+      { label: "Editorial Policy", href: "/editorial-policy/" },
       { label: "Advertising Policy", href: "/advertising-disclosure/" },
+      { label: "About US", href: "/about-us/" },
     ],
   },
 ]
@@ -64,9 +66,15 @@ const cols = [
 // Logos instead of text badges — drop the actual files into /public/images/partners/
 const partners = [
   { name: "18plus", logo: "/wp-content/uploads/2026/07/18plus-logo.png" },
-  { name: "gamblinghelponline", logo: "/wp-content/uploads/2026/07/gamblinghelponline.png" },
+  {
+    name: "gamblinghelponline",
+    logo: "/wp-content/uploads/2026/07/gamblinghelponline.png",
+  },
   { name: "DMCA", logo: "/wp-content/uploads/2026/07/dmca_premi_badge_4.png" },
-  { name: "GambleAware", logo: "/wp-content/uploads/2026/07/gambleraware.webp" },
+  {
+    name: "GambleAware",
+    logo: "/wp-content/uploads/2026/07/gambleraware.webp",
+  },
   { name: "eCOGRA", logo: "/wp-content/uploads/2026/07/ecogra.webp" },
   {
     name: "Trust Pilot",
@@ -77,6 +85,66 @@ const partners = [
 
 const year = new Date().getFullYear()
 ---
+
+{
+  authorName && (
+    <section class="site-trust-section">
+      <div class="wrap site-trust-container">
+        <div class="site-author-card">
+          {authorAvatar && (
+            <img
+              src={authorAvatar}
+              alt={authorName}
+              class="site-author-avatar"
+              referrerpolicy="no-referrer"
+            />
+          )}
+          <div class="site-author-info">
+            <h3 class="site-author-name">
+              {authorSlug ? (
+                <a href={`/about-us/${authorSlug}/`}>{authorName}</a>
+              ) : (
+                authorName
+              )}
+            </h3>
+            {authorBio && <p class="site-author-bio">{authorBio}</p>}
+            {socials.length > 0 && (
+              <div class="site-author-socials">
+                {socials.map(s => (
+                  <a
+                    href={s.url}
+                    target="_blank"
+                    rel="noopener"
+                    aria-label={s.network}
+                  >
+                    <svg
+                      viewBox="0 0 24 24"
+                      width="16"
+                      height="16"
+                      set:html={socialIcon[s.network] ?? socialIcon.website}
+                    />
+                  </a>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div class="site-trust-statement">
+          <p>
+            US Player Check delivers real money online casino reviews,
+            comparisons, and payout data that US players can actually rely on.
+            Our team backs every review with real deposits, real withdrawals,
+            and over a decade of experience testing the US market. Coverage
+            focuses on regulated states like New Jersey, Pennsylvania, Michigan,
+            and Connecticut. We're committed to clear, honest, and independently
+            tested coverage of online casinos in the United States.
+          </p>
+        </div>
+      </div>
+    </section>
+  )
+}
 
 <footer class="foot">
   <div class="wrap">
@@ -166,18 +234,117 @@ const year = new Date().getFullYear()
         <li><a href="/gambling-addiction/">Gambling Addiction</a></li>
         <li><a href="/dmca/">DMCA</a></li>
         <li>
-          <a
-            href="https://www.trustpilot.com/review/usplayercheck.com"
-            target="_blank"
-            rel="noopener noreferrer">Trustpilot</a>
+          href="https://www.trustpilot.com/review/usplayercheck.com"
+          target="_blank" rel="noopener noreferrer">Trustpilot
         </li>
-        <li><a href="/sitemap/">Sitemap</a></li>
       </ul>
+      <li><a href="/sitemap/">Sitemap</a></li>
     </div>
   </div>
 </footer>
 
 <style>
+  .site-trust-section {
+    background: var(--ivory-2);
+    padding: 48px 20px;
+    border-top: 1px solid var(--line);
+  }
+  .site-trust-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+  .site-author-card {
+    background: var(--white);
+    border: 1px solid var(--line);
+    border-top: 4px solid var(--emerald);
+    border-radius: var(--radius);
+    padding: 28px;
+    display: flex;
+    gap: 24px;
+    align-items: flex-start;
+    box-shadow: var(--shadow-sm);
+  }
+  .site-author-avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+    border: 3px solid var(--ivory);
+    box-shadow: var(--shadow-sm);
+  }
+  .site-author-info {
+    flex: 1;
+    min-width: 0;
+  }
+  .site-author-name {
+    margin: 0 0 12px 0;
+    font-size: 1.3rem;
+    font-weight: 700;
+  }
+  .site-author-name a {
+    color: var(--ink);
+    text-decoration: none;
+    transition: color 0.2s ease;
+  }
+  .site-author-name a:hover {
+    color: var(--emerald-2);
+  }
+  .site-author-bio {
+    color: var(--muted);
+    font-size: 0.95rem;
+    line-height: 1.65;
+    margin: 0 0 16px 0;
+  }
+  .site-author-socials {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .site-author-socials a {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--ivory);
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+  }
+  .site-author-socials a:hover {
+    background: var(--emerald);
+    color: #fff;
+    transform: translateY(-2px);
+  }
+  .site-trust-statement {
+    background: var(--white);
+    border: 1px solid var(--line);
+    border-left: 4px solid var(--emerald-2);
+    border-radius: var(--radius);
+    padding: 24px 28px;
+  }
+  .site-trust-statement p {
+    margin: 0;
+    color: var(--ink);
+    font-size: 1rem;
+    line-height: 1.75;
+    font-weight: 500;
+  }
+  @media (max-width: 640px) {
+    .site-author-card {
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+    .site-author-socials {
+      justify-content: center;
+    }
+  }
+
   .foot {
     background: var(--emerald);
     color: rgba(255, 255, 255, 0.82);
@@ -225,7 +392,7 @@ const year = new Date().getFullYear()
 
   .foot .brand {
     display: flex;
-    align-items: center; /* aligns logo with tagline/content below instead of floating left */
+    align-items: center;
     gap: 10px;
   }
   .foot .brand__name {
