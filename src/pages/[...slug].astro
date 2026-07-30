@@ -774,7 +774,13 @@ const schemaGraph = {
     )
   }
 
-  <Footer />
+  <Footer
+    authorName={author?.name}
+    authorAvatar={authorAvatar}
+    authorBio={author?.description ? strip(author.description) : null}
+    authorSlug={authorSlug}
+    socials={socials}
+  />
 </Layout>
 
 <style>
