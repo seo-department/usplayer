@@ -1779,11 +1779,11 @@ const schemaGraph = {
 
 
 
-  .author-tooltip-wrap {
+:global(.author-tooltip-wrap) {
     position: relative;
     display: inline-block;
   }
-  .author-tooltip-popup {
+  :global(.author-tooltip-popup) {
     position: absolute;
     top: 130%;
     left: 50%;
@@ -1805,7 +1805,7 @@ const schemaGraph = {
     transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s ease;
     z-index: 50;
   }
-  .author-tooltip-popup::after {
+  :global(.author-tooltip-popup::after) {
     content: "";
     position: absolute;
     bottom: 100%;
@@ -1815,22 +1815,21 @@ const schemaGraph = {
     border-style: solid;
     border-color: transparent transparent var(--white) transparent;
   }
-  .author-tooltip-wrap:hover .author-tooltip-popup {
+  :global(.author-tooltip-wrap:hover .author-tooltip-popup) {
     opacity: 1;
     visibility: visible;
     transform: translateX(-50%) translateY(0);
   }
   @media (max-width: 600px) {
-    .author-tooltip-popup {
+    :global(.author-tooltip-popup) {
       max-width: 220px;
       left: 0;
       transform: translateY(6px);
     }
-    .author-tooltip-wrap:hover .author-tooltip-popup {
+    :global(.author-tooltip-wrap:hover .author-tooltip-popup) {
       transform: translateY(0);
     }
   }
-
   /* img.entry__cover { display: none !important; } */
 </style>
 
