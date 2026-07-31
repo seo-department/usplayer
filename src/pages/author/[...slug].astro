@@ -10,9 +10,19 @@ export async function getStaticPaths() {
   const endpoint = import.meta.env.WP_GRAPHQL_URL;
   if (!endpoint) { console.warn('[wp] WP_GRAPHQL_URL is not set'); return []; }
 
-  const STAGING = 'https://wordpress-1301750-6506622.cloudwaysapps.com';
-  const MEDIA = (import.meta.env.WP_MEDIA_URL || STAGING).replace(/\/$/, '');
-  const mediaUrl = (u) => (u ? u.replaceAll(STAGING, MEDIA) : u);
+  // Always collapse any media URL down to a relative path (e.g. /wp-content/uploads/...)
+  // regardless of which host it came from. This means the raw Cloudways staging
+  // domain can never leak into rendered HTML, even if WP_MEDIA_URL is unset or wrong.
+  // vercel.json already proxies /wp-content/* to the real media host.
+  const mediaUrl = (u) => {
+    if (!u) return u;
+    try {
+      const parsed = new URL(u);
+      return parsed.pathname + parsed.search;
+    } catch {
+      return u; // already relative or malformed — leave as-is
+    }
+  };
 
   async function fetchAuthors() {
     const users = [];

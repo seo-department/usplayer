@@ -51,11 +51,29 @@ if (endpoint) {
     console.log('Fetched nodes count:', nodes.length); // TEMP
 
     if (nodes.length) {
+      
+      // Helper to clean WP entities and tags from titles/excerpts
+      const decodeWPText = (str) => {
+        if (!str) return '';
+        return str
+          .replace(/<\/?[^>]+(>|$)/g, '') // Strip HTML tags like <p>
+          .replace(/\[&hellip;\]/g, '...') // Fix WP bracketed ellipsis
+          .replace(/&hellip;/g, '...')
+          .replace(/&#8211;/g, '–') // En dash
+          .replace(/&#8212;/g, '—') // Em dash
+          .replace(/&#8216;/g, '‘') // Left single quote
+          .replace(/&#8217;/g, '’') // Right single quote / apostrophe
+          .replace(/&#8220;/g, '“') // Left double quote
+          .replace(/&#8221;/g, '”') // Right double quote
+          .replace(/&amp;/g, '&')
+          .replace(/&quot;/g, '"')
+          .replace(/&#039;/g, "'")
+          .replace(/&nbsp;/g, ' ')
+          .trim();
+      };
+
       // Map WP Node to our required format
       const formatPost = (node) => {
-        // Strip out <p> tags WP commonly sends in excerpts
-        const cleanExcerpt = (node.excerpt || '').replace(/<\/?[^>]+(>|$)/g, '').trim();
-        
         // Format the ISO date into "Jun 14, 2026"
         const formattedDate = new Date(node.date).toLocaleDateString('en-US', {
           month: 'short', day: 'numeric', year: 'numeric'
@@ -67,11 +85,11 @@ if (endpoint) {
         return {
           cat: node.categories?.nodes?.[0]?.name || 'News',
           date: formattedDate,
-          title: node.title,
-          excerpt: cleanExcerpt,
+          title: decodeWPText(node.title),
+          excerpt: decodeWPText(node.excerpt),
           img: mediaUrl(node.featuredImage?.node?.sourceUrl) || null,
           alt: node.featuredImage?.node?.altText || '',
-          href: `${base}/news${uri}`,
+          href: `${base}${uri}`, // <-- REMOVED /news HERE
           read: '5 min' // standard fallback since WP GraphQL doesn't give read time natively
         };
       };
