@@ -51,7 +51,40 @@ if (endpoint) {
     console.log('Fetched nodes count:', nodes.length); // TEMP
 
     if (nodes.length) {
-      // ...rest unchanged
+      // Map WP Node to our required format
+      const formatPost = (node) => {
+        // Strip out <p> tags WP commonly sends in excerpts
+        const cleanExcerpt = (node.excerpt || '').replace(/<\/?[^>]+(>|$)/g, '').trim();
+        
+        // Format the ISO date into "Jun 14, 2026"
+        const formattedDate = new Date(node.date).toLocaleDateString('en-US', {
+          month: 'short', day: 'numeric', year: 'numeric'
+        });
+
+        // Ensure URI formatting (safeguard against double slashes)
+        const uri = node.uri?.startsWith('/') ? node.uri : `/${node.uri}`;
+
+        return {
+          cat: node.categories?.nodes?.[0]?.name || 'News',
+          date: formattedDate,
+          title: node.title,
+          excerpt: cleanExcerpt,
+          img: mediaUrl(node.featuredImage?.node?.sourceUrl) || null,
+          alt: node.featuredImage?.node?.altText || '',
+          href: `${base}/news${uri}`,
+          read: '5 min' // standard fallback since WP GraphQL doesn't give read time natively
+        };
+      };
+
+      // Assign the most recent to the featured block
+      if (nodes[0]) {
+        featured = formatPost(nodes[0]);
+      }
+      
+      // Assign the remaining to the sidebar list
+      if (nodes.length > 1) {
+        items = nodes.slice(1, 4).map(formatPost);
+      }
     }
   } catch (e) {
     console.error('LatestNews fetch failed:', e); // TEMP — was silently swallowed before
