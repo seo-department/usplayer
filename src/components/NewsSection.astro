@@ -32,6 +32,8 @@ let featured = fallbackFeatured;
 let items = fallbackItems;
 
 const endpoint = import.meta.env.WP_GRAPHQL_URL;
+console.log('WP_GRAPHQL_URL is:', endpoint); // TEMP — remove after debugging
+
 if (endpoint) {
   try {
     const res = await fetch(endpoint, {
@@ -39,29 +41,23 @@ if (endpoint) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ query }),
     });
-    const nodes = (await res.json())?.data?.posts?.nodes ?? [];
+    const json = await res.json();
+
+    if (json.errors) {
+      console.error('WPGraphQL returned errors:', JSON.stringify(json.errors, null, 2)); // TEMP
+    }
+
+    const nodes = json?.data?.posts?.nodes ?? [];
+    console.log('Fetched nodes count:', nodes.length); // TEMP
+
     if (nodes.length) {
-      const strip = (h) => (h ?? '').replace(/<[^>]+>/g, '').trim();
-      const fmt = (n) => {
-        const text = strip(n.excerpt);
-        const words = text.split(/\s+/).filter(Boolean).length;
-        return {
-          cat: n.categories?.nodes?.[0]?.name ?? 'News',
-          date: new Date(n.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-          title: n.title,
-          excerpt: text,
-          img: mediaUrl(n.featuredImage?.node?.sourceUrl ?? null),
-          alt: n.featuredImage?.node?.altText ?? n.title,
-          href: `${base}${n.uri}`,
-          read: `${Math.max(1, Math.ceil(words / 200))} min`,
-        };
-      };
-      featured = fmt(nodes[0]);
-      items = nodes.slice(1).map(fmt);
+      // ...rest unchanged
     }
   } catch (e) {
-    /* keep fallback content */
+    console.error('LatestNews fetch failed:', e); // TEMP — was silently swallowed before
   }
+} else {
+  console.warn('WP_GRAPHQL_URL is not set — using fallback content'); // TEMP
 }
 ---
 
