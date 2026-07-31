@@ -10,18 +10,30 @@ export async function getStaticPaths() {
   const endpoint = import.meta.env.WP_GRAPHQL_URL;
   if (!endpoint) { console.warn('[wp] WP_GRAPHQL_URL is not set'); return []; }
 
-  // Always collapse any media URL down to a relative path (e.g. /wp-content/uploads/...)
-  // regardless of which host it came from. This means the raw Cloudways staging
-  // domain can never leak into rendered HTML, even if WP_MEDIA_URL is unset or wrong.
-  // vercel.json already proxies /wp-content/* to the real media host.
+  // Only strip the domain when the URL actually lives on our WP/Cloudways host.
+  // External hosts (e.g. Gravatar) are left fully intact since we don't proxy those.
+  const WP_HOSTS = ['wordpress-1301750-6506622.cloudwaysapps.com'];
   const mediaUrl = (u) => {
     if (!u) return u;
     try {
       const parsed = new URL(u);
-      return parsed.pathname + parsed.search;
+      if (WP_HOSTS.includes(parsed.hostname)) {
+        return parsed.pathname + parsed.search; // e.g. /wp-content/uploads/2024/08/bonnie-evans.png
+      }
+      return u; // e.g. Gravatar — leave untouched
     } catch {
       return u; // already relative or malformed — leave as-is
     }
+  };
+
+  // Manual avatar overrides for authors whose real photo lives in wp-content
+  // rather than Gravatar. Keyed by author slug (must match the slug this page
+  // resolves to — double check against the `clean()` output below).
+  const AVATAR_OVERRIDES = {
+    'bonnie-evans': '/wp-content/uploads/2024/08/bonnie-evans.png',
+    'charlotte-watts': '/wp-content/uploads/2025/09/charlotte-watts.png',
+    'jordie-hillcreek': '/wp-content/uploads/2024/08/Jordie-Hillcreek.png',
+    'margaret-cooper': '/wp-content/uploads/2024/07/Margaret-Cooper-us.webp',
   };
 
   async function fetchAuthors() {
@@ -85,7 +97,7 @@ export async function getStaticPaths() {
       props: {
         name: u.name,
         bio: u.description ?? '',
-        avatar: mediaUrl(u.avatar?.url ?? null),
+        avatar: AVATAR_OVERRIDES[slug] ?? mediaUrl(u.avatar?.url ?? null),
         posts,
       },
     });
