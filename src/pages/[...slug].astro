@@ -51,11 +51,13 @@ export async function getStaticPaths() {
   const POST_FIELDS = `title slug uri date modified excerpt content
     featuredImage { node { sourceUrl altText } }
     categories(first: 3) { nodes { name } }
-    author { node { name description url avatar { url } } }`
+    author { node { name description url avatar { url } } }
+    seo { focuskw }`
 
   const PAGE_FIELDS = `title slug uri date modified content isFrontPage
   featuredImage { node { sourceUrl altText } }
-  author { node { name description url avatar { url } } }`
+  author { node { name description url avatar { url } } }
+  seo { focuskw }`
 
   // Temporarily removed the reviewFields sub-query — it references a field
   // name ("reviewFields") that doesn't exist on the CasinoReview type in
@@ -64,7 +66,8 @@ export async function getStaticPaths() {
   // field group name from the WPGraphQL schema docs.
   const REVIEW_FIELDS = `title slug uri date modified content
   featuredImage { node { sourceUrl altText } }
-  author { node { name description url avatar { url } } }`
+  author { node { name description url avatar { url } } }
+  seo { focuskw }`
 
   async function fetchAll(root, fields) {
     const items = []
@@ -333,19 +336,28 @@ function slugify(str) {
     .replace(/(^-|-$)+/g, "")
 }
 
+function toTitleCase(str = "") {
+  return str.replace(/\w\S*/g, w => w[0].toUpperCase() + w.slice(1))
+}
+
+const crumbLabel = node.seo?.focuskw
+  ? toTitleCase(node.seo.focuskw)
+  : title
+
+
 const crumbItems = isReview
   ? [
       { label: "Home", href: "/" },
       { label: "Casino Reviews", href: "/casino-reviews/" },
-      { label: title },
+      { label: crumbLabel },              // was: { label: title }
     ]
   : isPost
     ? [
         { label: "Home", href: "/" },
         ...(cat ? [{ label: cat, href: `/category/${slugify(cat)}/` }] : []),
-        { label: title },
+        { label: crumbLabel },             // was: { label: title }
       ]
-    : [{ label: "Home", href: "/" }, { label: title }]
+    : [{ label: "Home", href: "/" }, { label: crumbLabel }]  // was: { label: title }
 
 const breadcrumbSchema = {
   "@type": "BreadcrumbList",
@@ -353,7 +365,7 @@ const breadcrumbSchema = {
   itemListElement: crumbItems.map((crumb, i) => ({
     "@type": "ListItem",
     position: i + 1,
-    name: crumb.label,
+    name: crumb.label,        // ← this line
     item: crumb.href ? `${siteUrl}${crumb.href}` : canonical,
   })),
 }

@@ -8,6 +8,9 @@ const casinos = [
   { rank: 6, name: 'Raging Bull',     slug: 'https://goto.usplayercheck.com/ragingbullcasino.home',   review: '/casino-reviews/raging-bull-casino/', logo: '/images/raging-bull-casino-135x70.png', score: '8.3', tag: 'Best rewards',     bonus: 'US$2,500 Bonus', extra: '+ 50 free spins',   payout: '< 48h',    licence: 'Curaçao', games: '200+' },
 ];
 
+const rankingsMonth = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+
 const casinoSchema = {
   '@context': 'https://schema.org',
   '@type': 'ItemList',
@@ -32,7 +35,7 @@ const casinoSchema = {
   <div class="wrap">
     <header class="rankings__head">
       <div>
-        <span class="eyebrow">August 2026 rankings</span>
+        <span class="eyebrow">{rankingsMonth} rankings</span>
         <h2 class="rankings__title">The top-rated casinos right now</h2>
       </div>
       <p class="rankings__sub">
