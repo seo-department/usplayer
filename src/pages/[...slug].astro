@@ -3,6 +3,7 @@ import Layout from "../layouts/Layout.astro"
 import Nav from "../components/Nav.astro"
 import Footer from "../components/Footer.astro"
 import Breadcrumbs from "../components/Breadcrumbs.astro"
+import ArticleSidebar from "../components/ArticleSidebar.astro"
 
 const STAGING = "https://wordpress-1301750-6506622.cloudwaysapps.com"
 
@@ -48,16 +49,20 @@ export async function getStaticPaths() {
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
   }
 
+  // Yoast SEO fields (from the WPGraphQL for Yoast SEO plugin).
+  // metaDesc = the meta description set in the Yoast box on each post/page.
+  const SEO_FIELDS = `seo { focuskw title metaDesc opengraphDescription }`
+
   const POST_FIELDS = `title slug uri date modified excerpt content
     featuredImage { node { sourceUrl altText } }
     categories(first: 3) { nodes { name } }
     author { node { name description url avatar { url } } }
-    seo { focuskw }`
+    ${SEO_FIELDS}`
 
   const PAGE_FIELDS = `title slug uri date modified content isFrontPage
   featuredImage { node { sourceUrl altText } }
   author { node { name description url avatar { url } } }
-  seo { focuskw }`
+  ${SEO_FIELDS}`
 
   // Temporarily removed the reviewFields sub-query — it references a field
   // name ("reviewFields") that doesn't exist on the CasinoReview type in
@@ -67,7 +72,7 @@ export async function getStaticPaths() {
   const REVIEW_FIELDS = `title slug uri date modified content
   featuredImage { node { sourceUrl altText } }
   author { node { name description url avatar { url } } }
-  seo { focuskw }`
+  ${SEO_FIELDS}`
 
   async function fetchAll(root, fields) {
     const items = []
@@ -86,6 +91,16 @@ export async function getStaticPaths() {
           headers: safeHeaders,
           body: JSON.stringify({ query, variables: { after } }),
         })
+        const type = res.headers.get("content-type") ?? ""
+        if (!res.ok || !type.includes("json")) {
+          // Cloudways bot protection returns an HTML challenge page, not JSON
+          const body = (await res.text()).slice(0, 200)
+          console.error(
+            `[wp] ${root} bad response: ${res.status} ${type} —`,
+            body.replace(/\s+/g, " "),
+          )
+          break
+        }
         json = await res.json()
       } catch (e) {
         console.error(`[wp] ${root} network error:`, e)
@@ -117,6 +132,14 @@ export async function getStaticPaths() {
     " pages:", pages.length,
     " reviews:", reviews.length,
   )
+
+  // Fail the build instead of silently deploying a site where every inner
+  // page 404s. On Vercel a failed build keeps the previous deployment live.
+  if (posts.length + pages.length + reviews.length === 0) {
+    throw new Error(
+      `[wp] WordPress returned no content from ${endpoint} — check WP_GRAPHQL_URL in Vercel env vars and Cloudways bot protection`,
+    )
+  }
 
   const clean = (uri, slug) => (uri || `/${slug}/`).replace(/^\/+|\/+$/g, "")
   const stripText = h =>
@@ -228,9 +251,81 @@ const fmtDate = d =>
       })
     : ""
 
+// ---------------------------------------------------------------------------
+// META DESCRIPTION
+// Priority: Yoast meta description → Yoast OG description → cleaned excerpt
+// → cleaned content. The "Last Updated / Written By / Fact checked by"
+// byline is always stripped so it can never leak into the description.
+// ---------------------------------------------------------------------------
+const decodeEntities = (s: string) =>
+  s
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&hellip;/g, "…")
+    .replace(/&rsquo;/g, "’")
+    .replace(/&lsquo;/g, "‘")
+    .replace(/&rdquo;/g, "”")
+    .replace(/&ldquo;/g, "“")
+    .replace(/&ndash;/g, "–")
+    .replace(/&mdash;/g, "—")
+    .replace(/&#x([0-9a-f]+);/gi, (_m, hex) => String.fromCodePoint(parseInt(hex, 16)))
+    .replace(/&#(\d+);/g, (_m, num) => String.fromCodePoint(Number(num)))
+
+const toPlain = (h?: string | null) =>
+  decodeEntities((h ?? "").replace(/<[^>]+>/g, " "))
+    .replace(/\[\s*(…|\.\.\.)\s*\]/g, "") // WP excerpt "[…]"
+    .replace(/\s+/g, " ")
+    .trim()
+
+// Known author / reviewer names (longest first so "Charlotte Watts" wins over "Charlotte")
+const bylineNames = [
+  ...new Set([...Object.keys(REVIEWER_BIOS), node.author?.node?.name].filter(Boolean)),
+].sort((a, b) => b.length - a.length)
+
+// Known names, or fall back to one or two capitalised words (never swallowing "Fact")
+const NAME_RE = `(?:${bylineNames.map(escapeName).join("|")}${bylineNames.length ? "|" : ""}[A-Z][\\w'’.-]+(?:\\s+(?!Fact\\b)[A-Z][\\w'’.-]+)?)`
+
+const BYLINE_PATTERNS = [
+  /^(?:[Ll]ast\s+)?[Uu]pdated:?\s*(?:on\s+)?[A-Za-z]+\.?\s+\d{1,2},?\s+\d{4}\s*/,
+  new RegExp(`^[Ww]ritten\\s+[Bb]y:?\\s+${NAME_RE}\\s*`),
+  new RegExp(`^[Ff]act[\\s-]*[Cc]hecked\\s+[Bb]y:?\\s+${NAME_RE}\\s*`),
+  new RegExp(`^[Rr]eviewed\\s+[Bb]y:?\\s+${NAME_RE}\\s*`),
+]
+
+function stripByline(text: string) {
+  let t = text.trim()
+  for (let pass = 0; pass < 4; pass++) {
+    const before = t
+    for (const re of BYLINE_PATTERNS) t = t.replace(re, "").trim()
+    t = t.replace(/^[|·•–—:\-\s]+/, "").trim()
+    if (t === before) break
+  }
+  return t
+}
+
+const truncate = (s: string, max = 155) => {
+  if (s.length <= max) return s
+  const cut = s.slice(0, max)
+  const lastSpace = cut.lastIndexOf(" ")
+  return (lastSpace > 80 ? cut.slice(0, lastSpace) : cut).replace(/[\s,.;:–—-]+$/, "") + "…"
+}
+
+const cleanDesc = (raw?: string | null) => stripByline(toPlain(raw))
+
+const yoastDesc = cleanDesc(node.seo?.metaDesc)
+const ogDesc = cleanDesc(node.seo?.opengraphDescription)
+const fallbackDesc = cleanDesc(node.excerpt) || cleanDesc(node.content)
+
+// Yoast text is used as written (Google handles length); fallbacks get trimmed
+const description = yoastDesc || ogDesc || truncate(fallbackDesc)
+// ---------------------------------------------------------------------------
+
 const title = node.title
 let contentHtml = rewriteMedia(node.content)
-const description = strip(node.excerpt) || strip(node.content).slice(0, 155)
 const heroImage = mediaUrl(node.featuredImage?.node?.sourceUrl ?? null)
 const heroAlt = node.featuredImage?.node?.altText ?? title
 
@@ -320,9 +415,10 @@ contentHtml = contentHtml.replace(
   (match, attrs, inner) => {
     const cleanText = strip(inner)
     if (!cleanText) return match
-    const headingSlug = slugifyHeading(cleanText)
+    const idMatch = attrs.match(/\sid=["']([^"']+)["']/)
+    const headingSlug = idMatch ? idMatch[1] : slugifyHeading(cleanText)
     tocItems.push({ text: cleanText, slug: headingSlug })
-    if (/\sid=/.test(attrs)) return match
+    if (idMatch) return match
     return `<h2${attrs} id="${headingSlug}">${inner}</h2>`
   },
 )
@@ -381,7 +477,7 @@ const authorPerson = author?.name
       ...(authorSlug ? { url: `${siteUrl}/about-us/${authorSlug}/` } : {}),
       ...(authorAvatar ? { image: authorAvatar } : {}),
       ...(author.description ? { description: strip(author.description) } : {}),
-      
+
       // --- NEW RICH PERSON SCHEMA FIELDS ---
       jobTitle: "Content Contributor", // Feel free to adjust this fallback title
       worksFor: {
@@ -546,7 +642,7 @@ const schemaGraph = {
         </header>
 
         {tocItems.length > 0 && (
-          <div class="wrap">
+          <div class="wrap toc--mobile">
             <nav class="toc" aria-label="Table of contents">
               <button class="toc__toggle" type="button" aria-expanded="false">
                 <span>Table of Contents</span>
@@ -562,6 +658,7 @@ const schemaGraph = {
             </nav>
           </div>
         )}
+
 
         <div class="wrap rentry__grid">
           <div class="prose" id="review-body" set:html={contentHtml} />
@@ -608,9 +705,14 @@ const schemaGraph = {
                 18+ · Terms apply · Gamble responsibly
               </span>
             </div>
+
+            <!-- Sticky TOC under the verdict card (desktop only) -->
+            <ArticleSidebar tocItems={tocItems} showMission={false} />
           </aside>
         </div>
+
       </article>
+
     ) : isPost ? (
       <article class="entry">
         <header class="phero">
@@ -647,7 +749,7 @@ const schemaGraph = {
         </header>
 
         {tocItems.length > 0 && (
-          <div class="wrap">
+          <div class="wrap toc--mobile">
             <nav class="toc" aria-label="Table of contents">
               <button class="toc__toggle" type="button" aria-expanded="false">
                 <span>Table of Contents</span>
@@ -677,8 +779,9 @@ const schemaGraph = {
           </div>
         )}
 
-        <div class="wrap">
+        <div class="wrap agrid">
           <div class="prose" set:html={contentHtml} />
+          <ArticleSidebar tocItems={tocItems} />
         </div>
 
         {author && (
@@ -734,7 +837,7 @@ const schemaGraph = {
         </header>
 
         {tocItems.length > 0 && (
-          <div class="wrap">
+          <div class="wrap toc--mobile">
             <nav class="toc" aria-label="Table of contents">
               <button class="toc__toggle" type="button" aria-expanded="false">
                 <span>Table of Contents</span>
@@ -751,12 +854,35 @@ const schemaGraph = {
           </div>
         )}
 
-        <div class="wrap">
+        <div class="wrap agrid">
           <div class="prose" set:html={contentHtml} />
+          <ArticleSidebar tocItems={tocItems} />
         </div>
       </article>
     )
   }
+
+  <!-- Editorial statement: rendered on every page type.
+       The script below moves it into the WP "Written By / Fact checked by"
+       box when one exists; otherwise it stays here as a fallback. -->
+  <div class="wrap" id="editorial-fallback">
+    <aside class="editorial" id="editorial-statement" aria-label="Editorial statement">
+      <span class="editorial__icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="18" height="18">
+          <path d="M12 2l8 3v6.5c0 5-3.4 8.8-8 10.5-4.6-1.7-8-5.5-8-10.5V5l8-3z" fill="none" stroke="currentColor" stroke-width="1.8" />
+          <path d="M8.3 12l2.6 2.6 4.8-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+        </svg>
+      </span>
+      <p class="editorial__text">
+        <strong class="editorial__label">Editorial Statement:</strong>
+        We review and select every gambling operator independently. Although we may
+        earn commissions from affiliate links or paid placements, those deals never
+        shape our editors' opinions or ratings. We measure every site against
+        <a href="/how-we-rate/">our own standards</a>, then flag shortcomings as
+        readily as strengths, whatever the commercial relationship.
+      </p>
+    </aside>
+  </div>
 
   {
     isPost && related.length > 0 && (
@@ -1009,6 +1135,7 @@ const schemaGraph = {
     font-size: 28px;
     margin: 42px 0 14px;
     letter-spacing: -0.02em;
+    scroll-margin-top: 96px; /* keeps headings clear of the sticky nav on jump */
   }
   .prose :global(h3) {
     font-size: 22px;
@@ -1067,10 +1194,38 @@ const schemaGraph = {
     background: var(--ivory-2);
   }
 
+  /* ---- Article + sidebar grid (posts and pages) ---- */
+  .agrid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    gap: 40px;
+    max-width: 1200px;
+    margin-inline: auto;
+    margin-top: 24px;
+  }
+  .agrid .prose {
+    margin-inline: 0;
+    margin-top: 0;
+    max-width: none;
+  }
+
+  /* Collapsible TOC is mobile-only now; the sidebar TOC takes over on desktop */
+  @media (min-width: 961px) {
+    .toc--mobile {
+      display: none;
+    }
+  }
+  @media (max-width: 960px) {
+    .agrid {
+      grid-template-columns: 1fr;
+      margin-top: 0;
+    }
+  }
+
   /* ---- Author card (end of post) ---- */
   .authorcard {
     max-width: 1200px;
-    margin: 8px auto 72px;
+    margin: 8px auto 20px;
     display: flex;
     gap: 18px;
     align-items: flex-start;
@@ -1247,10 +1402,6 @@ const schemaGraph = {
 
   aside.rsidebar {
     margin-top: 13px;
-  }
-
-  .rsidebar[data-astro-cid-fzx4jmue] {
-    top: 84px !important;
   }
 
   /* ---- Related strip (posts + reviews) ---- */
@@ -1503,7 +1654,7 @@ const schemaGraph = {
     color: #fff;
   }
 
-  /* ---- Review body + sticky sidebar ---- */
+  /* ---- Review body + sidebar ---- */
   .rentry__grid {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 320px;
@@ -1517,9 +1668,16 @@ const schemaGraph = {
     max-width: none;
   }
 
+  /* Sidebar column stretches the full review height so the TOC
+     card inside it can stay sticky all the way down. */
   .rsidebar {
-    position: sticky;
-    top: 24px;
+    align-self: stretch;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  .rsidebar > :global(.asb) {
+    flex: 1;
   }
   .rsidebar__card {
     background: var(--white);
@@ -1599,8 +1757,8 @@ const schemaGraph = {
       grid-template-columns: 1fr;
     }
     .rsidebar {
-      position: static;
       order: -1;
+      width: 100%;
       max-width: 420px;
       margin-inline: auto;
     }
@@ -1773,22 +1931,9 @@ const schemaGraph = {
     text-decoration: underline;
   }
 
-  .toc__list {
-    list-style: none;
-    margin: 0;
-    padding: 16px 20px;
-    background: var(--white);
-    display: grid;
-    gap: 10px;
-  }
-
   .toc__list[hidden] {
     display: none;
   }
-
-
-
-
 
 
 :global(.author-tooltip-wrap) {
@@ -1843,6 +1988,81 @@ const schemaGraph = {
     }
   }
   /* img.entry__cover { display: none !important; } */
+
+
+  /* ---- Editorial statement (base / fallback at bottom of page) ---- */
+  .editorial {
+    max-width: 1200px;
+    margin: 0 auto 72px;
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    background: var(--white);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--gold);
+    border-radius: var(--radius);
+    padding: 18px 22px;
+    box-shadow: var(--shadow-sm);
+  }
+  .editorial__icon {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: rgba(228, 203, 134, 0.18);
+    color: var(--gold-deep);
+  }
+  .editorial__text {
+    margin: 0;
+    font-size: 13.5px;
+    line-height: 1.65;
+    color: var(--muted);
+  }
+  .editorial__label {
+    color: var(--ink);
+    font-weight: 700;
+  }
+  .editorial__text a {
+    color: var(--emerald-2);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .editorial__text a:hover {
+    color: var(--emerald);
+  }
+
+  @media (max-width: 760px) {
+    .editorial {
+      padding: 16px;
+      gap: 12px;
+    }
+  }
+
+  /* ---- Editorial statement when moved inside the WP author box ----
+     Must come AFTER the base .editorial rules so these overrides win. */
+  .prose :global(.has-editorial) {
+    flex-wrap: wrap; /* in case the box is a flex row */
+  }
+  .editorial.editorial--inline {
+    flex-basis: 100%;
+    width: 100%;
+    max-width: none;
+    grid-column: 1 / -1; /* in case the box is a grid */
+    margin: 14px 0 0;
+    padding: 14px 0 0;
+    background: transparent;
+    border: 0;
+    border-top: 1px solid var(--line);
+    border-radius: 0;
+    box-shadow: none;
+  }
+  .editorial--inline .editorial__text {
+    margin: 0; /* override .prose p margin */
+    font-size: 13.5px;
+  }
 </style>
 
 <script>
@@ -1869,13 +2089,45 @@ const schemaGraph = {
     })
   }
 
+  function placeEditorial() {
+    const note = document.getElementById("editorial-statement")
+    const prose = document.querySelector(".prose")
+    if (!note || !prose || note.dataset.placed === "true") return
+
+    // Find the WP author box by its "Written By" / "Fact checked by" text
+    const walker = document.createTreeWalker(prose, NodeFilter.SHOW_TEXT)
+    let hit = null
+    while (walker.nextNode()) {
+      if (/written by|fact checked by/i.test(walker.currentNode.textContent)) {
+        hit = walker.currentNode.parentElement
+        break
+      }
+    }
+    if (!hit) return // no author box: leave the fallback at the bottom
+
+    // Climb to the box itself (the top-level block inside .prose)
+    let box = hit
+    while (box.parentElement && box.parentElement !== prose) box = box.parentElement
+
+    box.classList.add("has-editorial")
+    note.classList.add("editorial--inline")
+    box.appendChild(note)
+    note.dataset.placed = "true"
+    document.getElementById("editorial-fallback")?.remove()
+  }
+
+  function initAll() {
+    initTocToggles()
+    placeEditorial()
+  }
+
   // Run on first load
   if (document.readyState !== "loading") {
-    initTocToggles()
+    initAll()
   } else {
-    document.addEventListener("DOMContentLoaded", initTocToggles)
+    document.addEventListener("DOMContentLoaded", initAll)
   }
 
   // Re-run after Astro client-side navigations (View Transitions / ClientRouter)
-  document.addEventListener("astro:page-load", initTocToggles)
+  document.addEventListener("astro:page-load", initAll)
 </script>

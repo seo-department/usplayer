@@ -5,7 +5,18 @@ const base = '';
 // featured image src values leak the raw Cloudways domain into rendered HTML.
 const STAGING = 'https://wordpress-1301750-6506622.cloudwaysapps.com';
 const MEDIA = (import.meta.env.WP_MEDIA_URL ?? STAGING).replace(/\/$/, '');
-const mediaUrl = (u) => (u ? u.replace(STAGING, MEDIA) : u);
+const mediaUrl = (u) => (u ? u.replaceAll(STAGING, MEDIA) : u);
+
+// Fall back to the staging endpoint (same as [...slug].astro) so git/deploy-hook
+// builds still fetch real posts even if the env var is missing in Vercel.
+const endpoint = import.meta.env.WP_GRAPHQL_URL || `${STAGING}/graphql`;
+
+// Chrome User-Agent so Cloudways bot protection doesn't block the build fetch
+const safeHeaders = {
+  'Content-Type': 'application/json',
+  'User-Agent':
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+};
 
 const query = `query LatestNews {
   posts(first: 4, where: { orderby: { field: DATE, order: DESC } }) {
@@ -31,84 +42,73 @@ const fallbackItems = [
 let featured = fallbackFeatured;
 let items = fallbackItems;
 
-const endpoint = import.meta.env.WP_GRAPHQL_URL;
-console.log('WP_GRAPHQL_URL is:', endpoint); // TEMP — remove after debugging
+// Helper to clean WP entities and tags from titles/excerpts
+const decodeWPText = (str) => {
+  if (!str) return '';
+  return str
+    .replace(/<\/?[^>]+(>|$)/g, '') // Strip HTML tags like <p>
+    .replace(/\[&hellip;\]/g, '...') // Fix WP bracketed ellipsis
+    .replace(/&hellip;/g, '...')
+    .replace(/&#8211;/g, '–') // En dash
+    .replace(/&#8212;/g, '—') // Em dash
+    .replace(/&#8216;/g, '‘') // Left single quote
+    .replace(/&#8217;/g, '’') // Right single quote / apostrophe
+    .replace(/&#8220;/g, '“') // Left double quote
+    .replace(/&#8221;/g, '”') // Right double quote
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/&#039;/g, "'")
+    .replace(/&nbsp;/g, ' ')
+    .trim();
+};
 
-if (endpoint) {
-  try {
-    const res = await fetch(endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query }),
-    });
-    const json = await res.json();
+// Map WP Node to our required format
+const formatPost = (node) => {
+  // Format the ISO date into "Jun 14, 2026"
+  const formattedDate = new Date(node.date).toLocaleDateString('en-US', {
+    month: 'short', day: 'numeric', year: 'numeric',
+  });
 
-    if (json.errors) {
-      console.error('WPGraphQL returned errors:', JSON.stringify(json.errors, null, 2)); // TEMP
-    }
+  // Ensure URI formatting (safeguard against double slashes)
+  const uri = node.uri?.startsWith('/') ? node.uri : `/${node.uri}`;
 
-    const nodes = json?.data?.posts?.nodes ?? [];
-    console.log('Fetched nodes count:', nodes.length); // TEMP
+  return {
+    cat: node.categories?.nodes?.[0]?.name || 'News',
+    date: formattedDate,
+    title: decodeWPText(node.title),
+    excerpt: decodeWPText(node.excerpt),
+    img: mediaUrl(node.featuredImage?.node?.sourceUrl) || null,
+    alt: node.featuredImage?.node?.altText || '',
+    href: `${base}${uri}`,
+    read: '5 min', // standard fallback since WP GraphQL doesn't give read time natively
+  };
+};
 
-    if (nodes.length) {
-      
-      // Helper to clean WP entities and tags from titles/excerpts
-      const decodeWPText = (str) => {
-        if (!str) return '';
-        return str
-          .replace(/<\/?[^>]+(>|$)/g, '') // Strip HTML tags like <p>
-          .replace(/\[&hellip;\]/g, '...') // Fix WP bracketed ellipsis
-          .replace(/&hellip;/g, '...')
-          .replace(/&#8211;/g, '–') // En dash
-          .replace(/&#8212;/g, '—') // Em dash
-          .replace(/&#8216;/g, '‘') // Left single quote
-          .replace(/&#8217;/g, '’') // Right single quote / apostrophe
-          .replace(/&#8220;/g, '“') // Left double quote
-          .replace(/&#8221;/g, '”') // Right double quote
-          .replace(/&amp;/g, '&')
-          .replace(/&quot;/g, '"')
-          .replace(/&#039;/g, "'")
-          .replace(/&nbsp;/g, ' ')
-          .trim();
-      };
+try {
+  const res = await fetch(endpoint, {
+    method: 'POST',
+    headers: safeHeaders,
+    body: JSON.stringify({ query }),
+  });
 
-      // Map WP Node to our required format
-      const formatPost = (node) => {
-        // Format the ISO date into "Jun 14, 2026"
-        const formattedDate = new Date(node.date).toLocaleDateString('en-US', {
-          month: 'short', day: 'numeric', year: 'numeric'
-        });
-
-        // Ensure URI formatting (safeguard against double slashes)
-        const uri = node.uri?.startsWith('/') ? node.uri : `/${node.uri}`;
-
-        return {
-          cat: node.categories?.nodes?.[0]?.name || 'News',
-          date: formattedDate,
-          title: decodeWPText(node.title),
-          excerpt: decodeWPText(node.excerpt),
-          img: mediaUrl(node.featuredImage?.node?.sourceUrl) || null,
-          alt: node.featuredImage?.node?.altText || '',
-          href: `${base}${uri}`, // <-- REMOVED /news HERE
-          read: '5 min' // standard fallback since WP GraphQL doesn't give read time natively
-        };
-      };
-
-      // Assign the most recent to the featured block
-      if (nodes[0]) {
-        featured = formatPost(nodes[0]);
-      }
-      
-      // Assign the remaining to the sidebar list
-      if (nodes.length > 1) {
-        items = nodes.slice(1, 4).map(formatPost);
-      }
-    }
-  } catch (e) {
-    console.error('LatestNews fetch failed:', e); // TEMP — was silently swallowed before
+  const type = res.headers.get('content-type') ?? '';
+  if (!res.ok || !type.includes('json')) {
+    // Cloudways bot protection returns an HTML challenge page, not JSON
+    throw new Error(`WP responded ${res.status} (${type})`);
   }
-} else {
-  console.warn('WP_GRAPHQL_URL is not set — using fallback content'); // TEMP
+
+  const json = await res.json();
+  if (json.errors) {
+    console.error('[news] GraphQL errors:', JSON.stringify(json.errors));
+  }
+
+  const nodes = json?.data?.posts?.nodes ?? [];
+  console.log('[news] fetched', nodes.length, 'posts from', endpoint);
+
+  if (nodes[0]) featured = formatPost(nodes[0]);
+  if (nodes.length > 1) items = nodes.slice(1, 4).map(formatPost);
+} catch (e) {
+  console.error('[news] fetch failed, using fallback content:', e);
 }
 ---
 
