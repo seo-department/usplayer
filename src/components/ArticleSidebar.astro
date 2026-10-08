@@ -10,12 +10,12 @@ const { tocItems = [], showMission = true } = Astro.props
 <aside class="asb" aria-label="Sidebar">
   {showMission && (
     <section class="asb-card asb-mission">
-      <h2 class="asb-mission__head">
+      <b class="asb-mission__head">
         <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
           <path d="M12 2l8 3v6.5c0 5-3.4 8.8-8 10.5-4.6-1.7-8-5.5-8-10.5V5l8-3z" fill="currentColor" />
         </svg>
         Mission statement
-      </h2>
+      </b>
       <div class="asb-mission__body">
         <p class="asb-mission__lead">
           US Player Check is America's independent guide to legal, real money online casinos
@@ -32,10 +32,10 @@ const { tocItems = [], showMission = true } = Astro.props
 
   {tocItems.length > 0 && (
     <nav class="asb-card asb-toc" aria-label="Table of contents">
-      <h2 class="asb-toc__head">
+      <b class="asb-toc__head">
         <span class="asb-toc__flag" aria-hidden="true"></span>
         Table of contents
-      </h2>
+      </b>
       <ul class="asb-toc__list">
         {tocItems.map(item => (
           <li>
