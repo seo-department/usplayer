@@ -1,6 +1,6 @@
 export const prerender = true
 
-const STAGING = "https://wordpress-1301750-6506622.cloudwaysapps.com"
+const STAGING = "https://cms.usplayercheck.com"
 const SITE = "https://usplayercheck.com"
 
 export async function GET() {

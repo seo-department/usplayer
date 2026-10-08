@@ -5,7 +5,7 @@ import Footer from "../components/Footer.astro"
 import Breadcrumbs from "../components/Breadcrumbs.astro"
 import ArticleSidebar from "../components/ArticleSidebar.astro"
 
-const STAGING = "https://wordpress-1301750-6506622.cloudwaysapps.com"
+const STAGING = "https://cms.usplayercheck.com"
 
 const REVIEWER_BIOS: Record<string, string> = {
   "Evans Bonnie": "Evans Bonnie is a senior casino industry researcher who verifies licensing details, payout data, and bonus terms to ensure every review meets the site's accuracy standards.",
@@ -34,7 +34,7 @@ function injectTooltip(html: string, name: string | null | undefined, bio: strin
 }
 
 export async function getStaticPaths() {
-  const STAGING = "https://wordpress-1301750-6506622.cloudwaysapps.com"
+  const STAGING = "https://cms.usplayercheck.com"
 
   const endpoint = import.meta.env.WP_GRAPHQL_URL || `${STAGING}/graphql`
 

@@ -4,13 +4,13 @@ import Nav from '../../components/Nav.astro';
 import Footer from '../../components/Footer.astro';
 import Breadcrumbs from '../../components/Breadcrumbs.astro';
 
-const STAGING = 'https://wordpress-1301750-6506622.cloudwaysapps.com';
+const STAGING = 'https://cms.usplayercheck.com';
 
 export async function getStaticPaths() {
   const endpoint = import.meta.env.WP_GRAPHQL_URL;
   if (!endpoint) { console.warn('[wp] WP_GRAPHQL_URL is not set'); return []; }
 
-  const STAGING = 'https://wordpress-1301750-6506622.cloudwaysapps.com';
+  const STAGING = 'https://cms.usplayercheck.com';
   const MEDIA = (import.meta.env.WP_MEDIA_URL || STAGING).replace(/\/$/, '');
   const mediaUrl = (u) => (u ? u.replaceAll(STAGING, MEDIA) : u);
 

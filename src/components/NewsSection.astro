@@ -3,7 +3,7 @@ const base = '';
 
 // Same staging→live rewrite used in [...slug].astro — without this,
 // featured image src values leak the raw Cloudways domain into rendered HTML.
-const STAGING = 'https://wordpress-1301750-6506622.cloudwaysapps.com';
+const STAGING = 'https://cms.usplayercheck.com';
 const MEDIA = (import.meta.env.WP_MEDIA_URL ?? STAGING).replace(/\/$/, '');
 const mediaUrl = (u) => (u ? u.replaceAll(STAGING, MEDIA) : u);
 

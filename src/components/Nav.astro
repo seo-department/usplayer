@@ -224,20 +224,7 @@ const chev =
         <a href="/contact-us/">Contact</a>
         <a href="/editorial-policy/">Editorial Policy</a>
       </nav>
-      <div class="topbar__lang">
-        <svg
-          viewBox="0 0 24 24"
-          width="15"
-          height="15"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="1.6"
-          ><circle cx="12" cy="12" r="9"></circle><path
-            d="M3 12h18M12 3c2.5 2.5 3.8 5.8 3.8 9s-1.3 6.5-3.8 9c-2.5-2.5-3.8-5.8-3.8-9S9.5 5.5 12 3z"
-          ></path></svg
-        >
-        <span>English</span>
-      </div>
+      
     </div>
   </div>
   <div class="wrap nav__inner">
@@ -374,9 +361,13 @@ const chev =
   .nav__inner {
     display: flex;
     align-items: center;
-    gap: 2rem;
+    gap: 0rem;
     height: 72px;
   }
+
+  .nav__inner[data-astro-cid-dmqpwcec] {
+    display: inline-flex !important;
+}
 
   .brand {
     display: inline-flex;

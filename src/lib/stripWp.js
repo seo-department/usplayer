@@ -1,5 +1,5 @@
 // Cloudways staging origin → production origin
-const WP_ORIGIN = 'https://wordpress-1301750-6506622.cloudwaysapps.com';
+const WP_ORIGIN = 'https://cms.usplayercheck.com';
 const PUB_ORIGIN = import.meta.env.PUBLIC_SITE_URL || 'https://usplayercheck.com';
 
 // Escape for use inside a RegExp
