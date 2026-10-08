@@ -5,7 +5,18 @@ import Footer from "../components/Footer.astro"
 import Breadcrumbs from "../components/Breadcrumbs.astro"
 import ArticleSidebar from "../components/ArticleSidebar.astro"
 
-const STAGING = "https://cms.usplayercheck.com"
+// ---------------------------------------------------------------------------
+// Domains
+// SITE    = live Astro site (images are served from here via the vercel.json
+//           /wp-content/* rewrite, so they're indexed on the live domain)
+// CMS     = WordPress backend (headless)
+// OLD_CMS = previous Cloudways domain; kept so old URLs in content get
+//           rewritten and as a GraphQL fallback during builds
+// ---------------------------------------------------------------------------
+const SITE = "https://usplayercheck.com"
+const CMS = "https://cms.usplayercheck.com"
+const OLD_CMS = "https://wordpress-1301750-6506622.cloudwaysapps.com"
+const BACKENDS = [CMS, OLD_CMS, CMS.replace("https:", "http:"), OLD_CMS.replace("https:", "http:")]
 
 const REVIEWER_BIOS: Record<string, string> = {
   "Evans Bonnie": "Evans Bonnie is a senior casino industry researcher who verifies licensing details, payout data, and bonus terms to ensure every review meets the site's accuracy standards.",
@@ -34,19 +45,83 @@ function injectTooltip(html: string, name: string | null | undefined, bio: strin
 }
 
 export async function getStaticPaths() {
-  const STAGING = "https://cms.usplayercheck.com"
+  // getStaticPaths runs in its own scope, so the domains are repeated here
+  const SITE = "https://usplayercheck.com"
+  const CMS = "https://cms.usplayercheck.com"
+  const OLD_CMS = "https://wordpress-1301750-6506622.cloudwaysapps.com"
+  const BACKENDS = [CMS, OLD_CMS, CMS.replace("https:", "http:"), OLD_CMS.replace("https:", "http:")]
 
-  const endpoint = import.meta.env.WP_GRAPHQL_URL || `${STAGING}/graphql`
+  // Endpoints tried in order. The first one that returns JSON is used for
+  // the rest of the build. OLD_CMS is a safety net: it isn't behind
+  // Cloudflare, so builds still work if Cloudflare blocks Vercel's servers.
+  const ENDPOINTS = [
+    ...new Set(
+      [
+        import.meta.env.WP_GRAPHQL_URL,
+        `${CMS}/graphql`,
+        import.meta.env.WP_GRAPHQL_FALLBACK_URL,
+        `${OLD_CMS}/graphql`,
+      ].filter(Boolean),
+    ),
+  ]
+  console.log("[wp] GraphQL endpoints (in order):", ENDPOINTS.join(" | "))
 
-  console.log("[wp] Fetching data from:", endpoint)
-
-  const MEDIA = (import.meta.env.WP_MEDIA_URL ?? STAGING).replace(/\/$/, "")
-  const mediaUrl = u => (u ? u.replaceAll(STAGING, MEDIA) : u)
+  const MEDIA = (import.meta.env.WP_MEDIA_URL || SITE).replace(/\/$/, "")
+  const mediaUrl = u => {
+    if (!u) return u
+    let out = u
+    for (const b of BACKENDS) out = out.replaceAll(b, MEDIA)
+    return out
+  }
 
   const safeHeaders = {
     "Content-Type": "application/json",
+    Accept: "application/json",
     "User-Agent":
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+  }
+
+  const sleep = ms => new Promise(r => setTimeout(r, ms))
+  let activeEndpoint = null
+
+  // One GraphQL request with endpoint fallback + retry.
+  // redirect: "manual" so a 301 is reported as a 301 instead of being
+  // silently followed to a "Forbidden" page.
+  async function gql(query, variables) {
+    const tryList = activeEndpoint ? [activeEndpoint] : ENDPOINTS
+    for (const url of tryList) {
+      for (let attempt = 1; attempt <= 2; attempt++) {
+        try {
+          const res = await fetch(url, {
+            method: "POST",
+            headers: safeHeaders,
+            body: JSON.stringify({ query, variables }),
+            redirect: "manual",
+          })
+          const type = res.headers.get("content-type") ?? ""
+          if (res.ok && type.includes("json")) {
+            if (activeEndpoint !== url) {
+              activeEndpoint = url
+              console.log("[wp] Using endpoint:", url)
+            }
+            return await res.json()
+          }
+          const body = (await res.text()).slice(0, 200).replace(/\s+/g, " ")
+          const where = res.headers.get("location")
+          console.error(
+            `[wp] ${url} → ${res.status} ${type}${where ? ` (location: ${where})` : ""}${
+              res.headers.get("server") ? ` [server: ${res.headers.get("server")}]` : ""
+            } — ${body}`,
+          )
+          // Redirects / blocks won't fix themselves on retry: move to next endpoint
+          if (res.status >= 300 && res.status < 500) break
+        } catch (e) {
+          console.error(`[wp] ${url} network error (attempt ${attempt}):`, e?.message ?? e)
+        }
+        await sleep(1500)
+      }
+    }
+    return null
   }
 
   // Yoast SEO fields (from the WPGraphQL for Yoast SEO plugin).
@@ -84,26 +159,9 @@ export async function getStaticPaths() {
           nodes { ${fields} }
         }
       }`
-      let json
-      try {
-        const res = await fetch(endpoint, {
-          method: "POST",
-          headers: safeHeaders,
-          body: JSON.stringify({ query, variables: { after } }),
-        })
-        const type = res.headers.get("content-type") ?? ""
-        if (!res.ok || !type.includes("json")) {
-          // Cloudways bot protection returns an HTML challenge page, not JSON
-          const body = (await res.text()).slice(0, 200)
-          console.error(
-            `[wp] ${root} bad response: ${res.status} ${type} —`,
-            body.replace(/\s+/g, " "),
-          )
-          break
-        }
-        json = await res.json()
-      } catch (e) {
-        console.error(`[wp] ${root} network error:`, e)
+      const json = await gql(query, { after })
+      if (!json) {
+        console.error(`[wp] ${root}: no usable response from any endpoint`)
         break
       }
       if (json.errors) {
@@ -122,8 +180,9 @@ export async function getStaticPaths() {
     return items
   }
 
-  const [posts, pages, reviews] = await Promise.all([
-    fetchAll("posts", POST_FIELDS),
+  // Posts first, so a working endpoint is found once before the rest run
+  const posts = await fetchAll("posts", POST_FIELDS)
+  const [pages, reviews] = await Promise.all([
     fetchAll("pages", PAGE_FIELDS),
     fetchAll("casinoReviews", REVIEW_FIELDS),
   ])
@@ -137,7 +196,9 @@ export async function getStaticPaths() {
   // page 404s. On Vercel a failed build keeps the previous deployment live.
   if (posts.length + pages.length + reviews.length === 0) {
     throw new Error(
-      `[wp] WordPress returned no content from ${endpoint} — check WP_GRAPHQL_URL in Vercel env vars and Cloudways bot protection`,
+      `[wp] WordPress returned no content. Tried: ${ENDPOINTS.join(", ")}. ` +
+        `See the "[wp] ... →" lines above for the status of each endpoint ` +
+        `(403 + server: cloudflare = Cloudflare blocking Vercel; 301 = .htaccess redirect).`,
     )
   }
 
@@ -225,12 +286,16 @@ const { type, node, related = [] } = Astro.props
 const isPost = type === "post"
 const isReview = type === "review"
 
-const MEDIA = (import.meta.env.WP_MEDIA_URL ?? STAGING).replace(/\/$/, "")
-const mediaUrl = u => (u ? u.replaceAll(STAGING, MEDIA) : u)
+const MEDIA = (import.meta.env.WP_MEDIA_URL || SITE).replace(/\/$/, "")
+const mediaUrl = u => {
+  if (!u) return u
+  let out = u
+  for (const b of BACKENDS) out = out.replaceAll(b, MEDIA)
+  return out
+}
 
 const rewriteMedia = html =>
-  (html ?? "")
-    .replaceAll(STAGING, MEDIA)
+  mediaUrl(html ?? "")
     .replace(/(["'\s(,])\/wp-(content|includes)\//g, `$1${MEDIA}/wp-$2/`)
     .replace(
       /<script[^>]*type=["']application\/ld\+json["'][^>]*>[\s\S]*?<\/script>/gi,
@@ -423,7 +488,7 @@ contentHtml = contentHtml.replace(
   },
 )
 
-const siteUrl = "https://usplayercheck.com"
+const siteUrl = SITE
 
 function slugify(str) {
   return (str || "")
