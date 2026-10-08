@@ -15,7 +15,7 @@ import ArticleSidebar from "../components/ArticleSidebar.astro"
 // ---------------------------------------------------------------------------
 const SITE = "https://usplayercheck.com"
 const CMS = "https://cms.usplayercheck.com"
-const OLD_CMS = "https://wordpress-1301750-6506622.cloudwaysapps.com"
+const OLD_CMS = "https://cms.usplayercheck.com"
 const BACKENDS = [CMS, OLD_CMS, CMS.replace("https:", "http:"), OLD_CMS.replace("https:", "http:")]
 
 const REVIEWER_BIOS: Record<string, string> = {
@@ -48,7 +48,7 @@ export async function getStaticPaths() {
   // getStaticPaths runs in its own scope, so the domains are repeated here
   const SITE = "https://usplayercheck.com"
   const CMS = "https://cms.usplayercheck.com"
-  const OLD_CMS = "https://wordpress-1301750-6506622.cloudwaysapps.com"
+  const OLD_CMS = "https://cms.usplayercheck.com"
   const BACKENDS = [CMS, OLD_CMS, CMS.replace("https:", "http:"), OLD_CMS.replace("https:", "http:")]
 
   // Endpoints tried in order. The first one that returns JSON is used for
