@@ -1351,6 +1351,12 @@ p.editorial__text {
     margin: 0px 0 0 !important;
 }
 
+ @media (min-width: 720px) {
+    .content-wide--single-pages__post-author .author_name_updated_date p {
+        padding: 0 12px !important;
+    }
+}
+
 /* ================================
    Mobile
 ================================ */
