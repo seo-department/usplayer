@@ -4,6 +4,7 @@ import Nav from "../components/Nav.astro"
 import Footer from "../components/Footer.astro"
 import Breadcrumbs from "../components/Breadcrumbs.astro"
 import ArticleSidebar from "../components/ArticleSidebar.astro"
+import SidebarLinks from "../components/SidebarLinks.astro"
 
 // ---------------------------------------------------------------------------
 // Domains
@@ -15,7 +16,7 @@ import ArticleSidebar from "../components/ArticleSidebar.astro"
 // ---------------------------------------------------------------------------
 const SITE = "https://usplayercheck.com"
 const CMS = "https://cms.usplayercheck.com"
-const OLD_CMS = "https://cms.usplayercheck.com"
+const OLD_CMS = "https://wordpress-1301750-6506622.cloudwaysapps.com"
 const BACKENDS = [CMS, OLD_CMS, CMS.replace("https:", "http:"), OLD_CMS.replace("https:", "http:")]
 
 const REVIEWER_BIOS: Record<string, string> = {
@@ -48,7 +49,7 @@ export async function getStaticPaths() {
   // getStaticPaths runs in its own scope, so the domains are repeated here
   const SITE = "https://usplayercheck.com"
   const CMS = "https://cms.usplayercheck.com"
-  const OLD_CMS = "https://cms.usplayercheck.com"
+  const OLD_CMS = "https://wordpress-1301750-6506622.cloudwaysapps.com"
   const BACKENDS = [CMS, OLD_CMS, CMS.replace("https:", "http:"), OLD_CMS.replace("https:", "http:")]
 
   // Endpoints tried in order. The first one that returns JSON is used for
@@ -128,13 +129,15 @@ export async function getStaticPaths() {
   // metaDesc = the meta description set in the Yoast box on each post/page.
   const SEO_FIELDS = `seo { focuskw title metaDesc opengraphDescription }`
 
-  const POST_FIELDS = `title slug uri date modified excerpt content
+  // cusSidebar = JSON from the "Sidebar Links" meta box (mu-plugin).
+  // If a type doesn't expose it, fetchAll() retries without it.
+  const POST_FIELDS = `title slug uri date modified excerpt content cusSidebar
     featuredImage { node { sourceUrl altText } }
     categories(first: 3) { nodes { name } }
     author { node { name description url avatar { url } } }
     ${SEO_FIELDS}`
 
-  const PAGE_FIELDS = `title slug uri date modified content isFrontPage
+  const PAGE_FIELDS = `title slug uri date modified content isFrontPage cusSidebar
   featuredImage { node { sourceUrl altText } }
   author { node { name description url avatar { url } } }
   ${SEO_FIELDS}`
@@ -144,7 +147,7 @@ export async function getStaticPaths() {
   // WPGraphQL, which was crashing the entire build and causing every page
   // (not just reviews) to 404. Re-add once we confirm the correct ACF
   // field group name from the WPGraphQL schema docs.
-  const REVIEW_FIELDS = `title slug uri date modified content
+  const REVIEW_FIELDS = `title slug uri date modified content cusSidebar
   featuredImage { node { sourceUrl altText } }
   author { node { name description url avatar { url } } }
   ${SEO_FIELDS}`
@@ -152,11 +155,12 @@ export async function getStaticPaths() {
   async function fetchAll(root, fields) {
     const items = []
     let after = null
+    let activeFields = fields
     for (let i = 0; i < 50; i++) {
       const query = `query($after: String) {
         ${root}(first: 100, after: $after) {
           pageInfo { hasNextPage endCursor }
-          nodes { ${fields} }
+          nodes { ${activeFields} }
         }
       }`
       const json = await gql(query, { after })
@@ -165,6 +169,15 @@ export async function getStaticPaths() {
         break
       }
       if (json.errors) {
+        const msg = JSON.stringify(json.errors)
+        // Optional field not in the schema for this type: retry without it
+        if (/\bcusSidebar\b/.test(activeFields) && /cusSidebar/.test(msg)) {
+          console.warn(
+            `[wp] ${root}: cusSidebar not exposed for this type, retrying without it`,
+          )
+          activeFields = activeFields.replace(/\bcusSidebar\b/, "")
+          continue
+        }
         console.error(
           `[wp] ${root} GraphQL errors:`,
           JSON.stringify(json.errors, null, 2),
@@ -488,6 +501,57 @@ contentHtml = contentHtml.replace(
   },
 )
 
+// ---------------------------------------------------------------------------
+// SIDEBAR LINKS: interlinking box set per page in the WP editor.
+// Hidden unless at least one link has been added.
+// ---------------------------------------------------------------------------
+type SidebarItem = {
+  type: "heading" | "link"
+  text: string
+  url?: string
+  external?: boolean
+  sponsored?: boolean
+}
+
+// Own domains (live, www, cms, old Cloudways) become relative links
+const OWN_DOMAIN_RE =
+  /^https?:\/\/(?:(?:www\.|cms\.)?usplayercheck\.com|wordpress-1301750-6506622\.cloudwaysapps\.com)/i
+
+const toSidebarUrl = (raw: string) => {
+  const url = (raw || "").trim()
+  if (!url) return ""
+  const rel = url.replace(OWN_DOMAIN_RE, "")
+  return rel !== url ? rel || "/" : url
+}
+
+let sidebarLinks: { title: string; items: SidebarItem[] } | null = null
+try {
+  const parsed = node.cusSidebar ? JSON.parse(node.cusSidebar) : null
+  if (parsed && Array.isArray(parsed.items)) {
+    const items: SidebarItem[] = parsed.items
+      .map((it: any): SidebarItem => {
+        const type = it.type === "heading" ? "heading" : "link"
+        const url = type === "link" ? toSidebarUrl(it.url) : undefined
+        const external = !!url && /^https?:\/\//i.test(url)
+        return {
+          type,
+          text: String(it.text || "").trim(),
+          url,
+          external,
+          // goto.usplayercheck.com = affiliate redirect → nofollow sponsored
+          sponsored: external && /^https?:\/\/goto\./i.test(url!),
+        }
+      })
+      .filter((it: SidebarItem) => it.text && (it.type === "heading" || it.url))
+
+    if (items.some(it => it.type === "link")) {
+      sidebarLinks = { title: String(parsed.title || "").trim(), items }
+    }
+  }
+} catch (e) {
+  console.warn("[sidebar-links] could not parse cusSidebar for", node.uri)
+}
+
 const siteUrl = SITE
 
 function slugify(str) {
@@ -771,6 +835,14 @@ const schemaGraph = {
               </span>
             </div>
 
+            {/* Sidebar Links box (set per review in the WP editor) */}
+            {sidebarLinks && (
+              <SidebarLinks
+                title={sidebarLinks.title}
+                items={sidebarLinks.items}
+              />
+            )}
+
             <!-- Sticky TOC under the verdict card (desktop only) -->
             <ArticleSidebar tocItems={tocItems} showMission={false} />
           </aside>
@@ -846,7 +918,15 @@ const schemaGraph = {
 
         <div class="wrap agrid">
           <div class="prose" set:html={contentHtml} />
-          <ArticleSidebar tocItems={tocItems} />
+          <div class="sidecol">
+            {sidebarLinks && (
+              <SidebarLinks
+                title={sidebarLinks.title}
+                items={sidebarLinks.items}
+              />
+            )}
+            <ArticleSidebar tocItems={tocItems} />
+          </div>
         </div>
 
         {author && (
@@ -921,7 +1001,15 @@ const schemaGraph = {
 
         <div class="wrap agrid">
           <div class="prose" set:html={contentHtml} />
-          <ArticleSidebar tocItems={tocItems} />
+          <div class="sidecol">
+            {sidebarLinks && (
+              <SidebarLinks
+                title={sidebarLinks.title}
+                items={sidebarLinks.items}
+              />
+            )}
+            <ArticleSidebar tocItems={tocItems} />
+          </div>
         </div>
       </article>
     )
@@ -1272,6 +1360,20 @@ const schemaGraph = {
     margin-inline: 0;
     margin-top: 0;
     max-width: none;
+  }
+
+  /* Sidebar column: Sidebar Links box on top, ArticleSidebar below.
+     Stretches the full article height so the sticky TOC inside
+     ArticleSidebar keeps sticking all the way down. */
+  .sidecol {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    align-self: stretch;
+    min-width: 0;
+  }
+  .sidecol > :global(.asb) {
+    flex: 1;
   }
 
   /* Collapsible TOC is mobile-only now; the sidebar TOC takes over on desktop */

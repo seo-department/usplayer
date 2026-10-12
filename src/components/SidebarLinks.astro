@@ -1,0 +1,115 @@
+---
+// Interlinking box set per page in WordPress (Sidebar Links meta box).
+// Rendered in the sidebar of posts, pages and casino reviews.
+interface Item {
+  type: "heading" | "link"
+  text: string
+  url?: string
+  external?: boolean
+  sponsored?: boolean
+}
+interface Props {
+  title?: string
+  items: Item[]
+}
+
+const { title = "", items = [] } = Astro.props
+---
+
+<nav class="slinks" aria-label={title || "Related links"}>
+  {
+    title && (
+      <div class="slinks__head">
+        <span class="slinks__flag" aria-hidden="true" />
+        <span class="slinks__title">{title}</span>
+      </div>
+    )
+  }
+  <ul class="slinks__list">
+    {
+      items.map(it =>
+        it.type === "heading" ? (
+          <li class="slinks__sub">{it.text}</li>
+        ) : (
+          <li class="slinks__item">
+            <a
+              href={it.url}
+              {...(it.external
+                ? {
+                    target: "_blank",
+                    rel: it.sponsored
+                      ? "nofollow sponsored noopener"
+                      : "noopener noreferrer",
+                  }
+                : {})}
+            >
+              {it.text}
+            </a>
+          </li>
+        ),
+      )
+    }
+  </ul>
+</nav>
+
+<style>
+  .slinks {
+    background: var(--white, #fff);
+    border: 1px solid var(--line, #e6e9f1);
+    border-radius: var(--radius, 14px);
+    box-shadow: var(--shadow-sm, 0 1px 3px rgba(15, 22, 40, 0.08));
+    padding: 18px 20px 14px;
+  }
+  .slinks__head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .slinks__flag {
+    width: 18px;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--gold, #c8a24b);
+    flex: none;
+  }
+  .slinks__title {
+    font-family: var(--body, inherit);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink, #131a2e);
+  }
+  .slinks__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .slinks__item + .slinks__item {
+    border-top: 1px solid var(--line, #eef1f8);
+  }
+  .slinks__item a {
+    display: block;
+    padding: 9px 0;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.4;
+    color: var(--emerald-2, #2a43a0);
+    text-decoration: none;
+    transition: color 0.15s ease, padding-left 0.15s ease;
+  }
+  .slinks__item a:hover {
+    color: var(--emerald, #1f2f6b);
+    padding-left: 4px;
+  }
+  .slinks__sub {
+    margin: 12px 0 2px;
+    font-size: 13px;
+    font-weight: 800;
+    color: var(--ink, #131a2e);
+  }
+  .slinks__sub:first-child {
+    margin-top: 0;
+  }
+</style>
