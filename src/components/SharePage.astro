@@ -125,7 +125,7 @@ const shareIcon =
   <template data-share-link set:html={linkIcon} />
 </div>
 
-<style is:global>
+<style is:inline>
   .ushare {
     position: relative;
     display: inline-flex;
@@ -346,106 +346,191 @@ const shareIcon =
       transition: none;
     }
   }
+
+  /* ---- High-specificity overrides: beat .prose a / theme button rules ---- */
+  .ushare.ushare {
+    display: inline-flex !important;
+    align-items: center !important;
+    position: relative !important;
+    padding: 3px !important;
+    border-radius: 999px !important;
+    width: auto !important;
+    flex: none !important;
+  }
+  .ushare.ushare--light {
+    background: #fff !important;
+    border: 1px solid #e6e9f1 !important;
+  }
+  .ushare.ushare--dark {
+    background: rgba(255, 255, 255, 0.1) !important;
+    border: 1px solid rgba(255, 255, 255, 0.25) !important;
+  }
+  .ushare .ushare__icons {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 6px !important;
+    position: absolute !important;
+    top: 50% !important;
+    margin: 0 !important;
+  }
+  .ushare .ushare__btn,
+  .ushare .ushare__toggle {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border: 0 !important;
+    border-radius: 50% !important;
+    text-decoration: none !important;
+    cursor: pointer !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+  }
+  .ushare .ushare__btn {
+    width: 30px !important;
+    height: 30px !important;
+    color: #fff !important;
+  }
+  .ushare .ushare__toggle {
+    width: 34px !important;
+    height: 34px !important;
+  }
+  .ushare.ushare--light .ushare__toggle { background: #f3f5fb !important; color: #1f2f6b !important; }
+  .ushare.ushare--dark .ushare__toggle { background: rgba(255, 255, 255, 0.15) !important; color: #fff !important; }
+  .ushare .ushare__toggle:hover,
+  .ushare.is-open .ushare__toggle { background: #c8a24b !important; color: #fff !important; }
+
+  .ushare .ushare__btn--x { background: #000 !important; }
+  .ushare .ushare__btn--facebook { background: #1877f2 !important; }
+  .ushare .ushare__btn--linkedin { background: #0a66c2 !important; }
+  .ushare .ushare__btn--whatsapp { background: #25d366 !important; }
+  .ushare .ushare__btn--telegram { background: #229ed9 !important; }
+  .ushare .ushare__btn--reddit { background: #ff4500 !important; }
+  .ushare .ushare__btn--email { background: #64748b !important; }
+  .ushare .ushare__btn--copy { background: #1f2f6b !important; }
+  .ushare .ushare__btn--copy.is-copied { background: #16a34a !important; }
+
+  .ushare .ushare__btn svg,
+  .ushare .ushare__toggle svg {
+    width: 15px !important;
+    height: 15px !important;
+    display: block !important;
+    margin: 0 !important;
+  }
+  .ushare template { display: none !important; }
 </style>
 
-<script>
-  function initSharePills() {
-    document.querySelectorAll<HTMLElement>("[data-share]").forEach(wrap => {
-      if (wrap.dataset.shareBound) return
-      wrap.dataset.shareBound = "true"
+<script is:inline>
+  ;(function () {
+    function initSharePills() {
+      document.querySelectorAll("[data-share]").forEach(function (wrap) {
+        if (wrap.dataset.shareBound) return
+        wrap.dataset.shareBound = "true"
 
-      const toggle = wrap.querySelector<HTMLButtonElement>("[data-share-toggle]")
-      const copyBtn = wrap.querySelector<HTMLButtonElement>("[data-share-copy]")
-      const toast = wrap.querySelector<HTMLElement>("[data-share-toast]")
-      const checkTpl = wrap.querySelector<HTMLTemplateElement>("[data-share-check]")
-      const linkTpl = wrap.querySelector<HTMLTemplateElement>("[data-share-link]")
-      if (!toggle) return
+        var toggle = wrap.querySelector("[data-share-toggle]")
+        var copyBtn = wrap.querySelector("[data-share-copy]")
+        var toast = wrap.querySelector("[data-share-toast]")
+        var checkTpl = wrap.querySelector("[data-share-check]")
+        var linkTpl = wrap.querySelector("[data-share-link]")
+        if (!toggle) return
 
-      const url = wrap.dataset.shareUrl || location.href
-      const title = wrap.dataset.shareTitle || document.title
-      const isTouch = window.matchMedia("(hover: none)").matches
-      let toastTimer: ReturnType<typeof setTimeout> | undefined
+        var url = wrap.dataset.shareUrl || location.href
+        var title = wrap.dataset.shareTitle || document.title
+        var isTouch = window.matchMedia("(hover: none)").matches
+        var toastTimer
 
-      const setOpen = (open: boolean) => {
-        wrap.classList.toggle("is-open", open)
-        toggle.setAttribute("aria-expanded", open ? "true" : "false")
-      }
-
-      const showToast = (msg: string) => {
-        if (!toast) return
-        toast.textContent = msg
-        toast.classList.add("is-visible")
-        clearTimeout(toastTimer)
-        toastTimer = setTimeout(() => toast.classList.remove("is-visible"), 1800)
-      }
-
-      toggle.addEventListener("click", async e => {
-        e.stopPropagation()
-        // Phones/tablets: native share sheet (any installed app)
-        if (isTouch && navigator.share) {
-          try {
-            await navigator.share({ title, url })
-            return
-          } catch (err: any) {
-            if (err && err.name === "AbortError") return
-          }
+        function setOpen(open) {
+          wrap.classList.toggle("is-open", open)
+          toggle.setAttribute("aria-expanded", open ? "true" : "false")
         }
-        setOpen(!wrap.classList.contains("is-open"))
-      })
 
-      // Social links open in a small centered popup (new tab as fallback)
-      wrap.querySelectorAll<HTMLAnchorElement>("[data-share-popup]").forEach(a => {
-        a.addEventListener("click", e => {
-          const w = 600
-          const h = 560
-          const left = window.screenX + (window.outerWidth - w) / 2
-          const top = window.screenY + (window.outerHeight - h) / 2
-          const popup = window.open(
-            a.href,
-            "share",
-            `width=${w},height=${h},left=${left},top=${top}`,
-          )
-          if (popup) {
-            popup.opener = null
-            e.preventDefault()
+        function showToast(msg) {
+          if (!toast) return
+          toast.textContent = msg
+          toast.classList.add("is-visible")
+          clearTimeout(toastTimer)
+          toastTimer = setTimeout(function () {
+            toast.classList.remove("is-visible")
+          }, 1800)
+        }
+
+        toggle.addEventListener("click", function (e) {
+          e.stopPropagation()
+          // Phones/tablets: native share sheet (any installed app)
+          if (isTouch && navigator.share) {
+            navigator.share({ title: title, url: url }).catch(function (err) {
+              if (!err || err.name !== "AbortError") setOpen(!wrap.classList.contains("is-open"))
+            })
+            return
           }
+          setOpen(!wrap.classList.contains("is-open"))
+        })
+
+        // Social links open in a small centered popup (new tab as fallback)
+        wrap.querySelectorAll("[data-share-popup]").forEach(function (a) {
+          a.addEventListener("click", function (e) {
+            var w = 600
+            var h = 560
+            var left = window.screenX + (window.outerWidth - w) / 2
+            var top = window.screenY + (window.outerHeight - h) / 2
+            var popup = window.open(
+              a.href,
+              "share",
+              "width=" + w + ",height=" + h + ",left=" + left + ",top=" + top,
+            )
+            if (popup) {
+              popup.opener = null
+              e.preventDefault()
+            }
+          })
+        })
+
+        if (copyBtn) {
+          copyBtn.addEventListener("click", function (e) {
+            e.stopPropagation()
+            var done = function () {
+              var svg = copyBtn.querySelector("svg")
+              copyBtn.classList.add("is-copied")
+              if (svg && checkTpl) svg.innerHTML = checkTpl.innerHTML
+              showToast("Link copied")
+              setTimeout(function () {
+                copyBtn.classList.remove("is-copied")
+                if (svg && linkTpl) svg.innerHTML = linkTpl.innerHTML
+              }, 1800)
+            }
+            var fallback = function () {
+              var ta = document.createElement("textarea")
+              ta.value = url
+              ta.style.position = "fixed"
+              ta.style.opacity = "0"
+              document.body.appendChild(ta)
+              ta.select()
+              document.execCommand("copy")
+              ta.remove()
+              done()
+            }
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+              navigator.clipboard.writeText(url).then(done, fallback)
+            } else {
+              fallback()
+            }
+          })
+        }
+
+        document.addEventListener("click", function (e) {
+          if (!wrap.contains(e.target)) setOpen(false)
+        })
+        document.addEventListener("keydown", function (e) {
+          if (e.key === "Escape") setOpen(false)
         })
       })
+    }
 
-      copyBtn?.addEventListener("click", async e => {
-        e.stopPropagation()
-        try {
-          await navigator.clipboard.writeText(url)
-        } catch {
-          // Fallback for older browsers / non-HTTPS
-          const ta = document.createElement("textarea")
-          ta.value = url
-          ta.style.position = "fixed"
-          ta.style.opacity = "0"
-          document.body.appendChild(ta)
-          ta.select()
-          document.execCommand("copy")
-          ta.remove()
-        }
-        const svg = copyBtn.querySelector("svg")
-        copyBtn.classList.add("is-copied")
-        if (svg && checkTpl) svg.innerHTML = checkTpl.innerHTML
-        showToast("Link copied")
-        setTimeout(() => {
-          copyBtn.classList.remove("is-copied")
-          if (svg && linkTpl) svg.innerHTML = linkTpl.innerHTML
-        }, 1800)
-      })
-
-      document.addEventListener("click", e => {
-        if (!wrap.contains(e.target as Node)) setOpen(false)
-      })
-      document.addEventListener("keydown", e => {
-        if (e.key === "Escape") setOpen(false)
-      })
-    })
-  }
-
-  initSharePills()
-  document.addEventListener("astro:page-load", initSharePills)
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", initSharePills)
+    } else {
+      initSharePills()
+    }
+    document.addEventListener("astro:page-load", initSharePills)
+  })()
 </script>
