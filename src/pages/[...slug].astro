@@ -5,6 +5,7 @@ import Footer from "../components/Footer.astro"
 import Breadcrumbs from "../components/Breadcrumbs.astro"
 import ArticleSidebar from "../components/ArticleSidebar.astro"
 import SidebarLinks from "../components/SidebarLinks.astro"
+import SharePage from "../components/SharePage.astro"
 
 // ---------------------------------------------------------------------------
 // Domains
@@ -454,6 +455,10 @@ const canonical = new URL(Astro.url.pathname, Astro.site).toString()
 
 const visitUrl = `https://goto.usplayercheck.com/${node.slug}.home`
 
+// SHARE THIS PAGE: always share the live URL (never localhost / preview)
+const shareUrl = new URL(Astro.url.pathname, SITE).toString()
+const shareTitle = decodeEntities(strip(title))
+
 const rf = node.reviewFields ?? {}
 const rating = rf.rating != null && rf.rating !== "" ? Number(rf.rating) : null
 const promoHeadline = rf.promoHeadline ?? null
@@ -766,6 +771,9 @@ const schemaGraph = {
                 Sign Up →
               </a>
               <span class="rband__note">New players only · 18+</span>
+              <div class="rband__share">
+                <SharePage url={shareUrl} title={shareTitle} variant="light" open="left" />
+              </div>
             </div>
           </div>
         </header>
@@ -882,6 +890,10 @@ const schemaGraph = {
                 </span>
               </div>
             </div>
+
+            <div class="phero__share">
+              <SharePage url={shareUrl} title={shareTitle} variant="dark" open="right" />
+            </div>
           </div>
         </header>
 
@@ -976,8 +988,9 @@ const schemaGraph = {
     ) : (
       <article class="entry">
         <header class="ghero">
-          <div class="wrap">
+          <div class="wrap ghero__row">
             <h1 class="ghero__title">{title}</h1>
+            <SharePage url={shareUrl} title={shareTitle} variant="light" open="left" />
           </div>
         </header>
 
@@ -1270,6 +1283,29 @@ const schemaGraph = {
     color: var(--ink);
     max-width: 100%;
   }
+  .ghero__row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+  }
+
+  /* ---- Share pills ---- */
+  .phero__share {
+    display: flex;
+    justify-content: center;
+    margin-top: 18px;
+  }
+  .rband__share {
+    margin-top: 4px;
+  }
+  @media (max-width: 760px) {
+    .ghero__row {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+  }
+
   .ghero__updated {
     margin-top: 10px;
     font-size: 13.5px;

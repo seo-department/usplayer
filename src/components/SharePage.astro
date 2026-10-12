@@ -1,0 +1,402 @@
+---
+// "Share this page" pill: one button that slides open X, Facebook,
+// LinkedIn, WhatsApp, Telegram, Reddit, Email + Copy Link.
+// Icons open as an overlay so the surrounding layout never shifts
+// (no hover "vibration"). On phones the button opens the native
+// share sheet instead.
+interface Props {
+  url: string
+  title: string
+  /** "light" for white/ivory backgrounds, "dark" for the navy post hero */
+  variant?: "light" | "dark"
+  /** Which side the icons slide out to */
+  open?: "left" | "right"
+}
+
+const { url, title, variant = "light", open = "left" } = Astro.props
+
+const encUrl = encodeURIComponent(url)
+const encTitle = encodeURIComponent(title)
+
+const links = [
+  {
+    key: "x",
+    label: "Share on X",
+    href: `https://twitter.com/intent/tweet?url=${encUrl}&text=${encTitle}`,
+    icon: '<path d="M4 4l7 9-7 7h2.5l5.5-5.5L16 20h4l-7.3-9.4L19.5 4H17l-5 5L8 4z" fill="currentColor"/>',
+  },
+  {
+    key: "facebook",
+    label: "Share on Facebook",
+    href: `https://www.facebook.com/sharer/sharer.php?u=${encUrl}`,
+    icon: '<path d="M14 7h2V4h-2.5C11 4 10 5.6 10 7.5V9H8v3h2v8h3v-8h2.2l.8-3H13V7.6c0-.4.3-.6.7-.6z" fill="currentColor"/>',
+  },
+  {
+    key: "linkedin",
+    label: "Share on LinkedIn",
+    href: `https://www.linkedin.com/sharing/share-offsite/?url=${encUrl}`,
+    icon: '<path d="M6 9v9M6 6v.01M10 18v-5a2 2 0 014 0v5M10 12v6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+  },
+  {
+    key: "whatsapp",
+    label: "Share on WhatsApp",
+    href: `https://api.whatsapp.com/send?text=${encTitle}%20${encUrl}`,
+    icon: '<path d="M12 3.5a8.5 8.5 0 00-7.3 12.8L3.5 20.5l4.3-1.1A8.5 8.5 0 1012 3.5z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M9.2 8.4c.2-.4.4-.4.6-.4h.5c.2 0 .4 0 .5.4l.7 1.6c.1.2 0 .4-.1.6l-.5.6c-.1.1-.1.3 0 .5.5.9 1.3 1.7 2.3 2.2.2.1.4.1.5-.1l.6-.7c.2-.2.4-.2.6-.1l1.5.7c.2.1.4.3.3.5 0 .9-.7 1.7-1.6 1.8-2.6.3-6-3-6.3-5.6 0-.8.2-1.5.4-2z" fill="currentColor"/>',
+  },
+  {
+    key: "telegram",
+    label: "Share on Telegram",
+    href: `https://t.me/share/url?url=${encUrl}&text=${encTitle}`,
+    icon: '<path d="M20.5 4.5L3.6 11.1c-.9.4-.9 1.3 0 1.6l4.2 1.3 1.6 5c.2.6.9.8 1.4.4l2.4-2 4.3 3.2c.6.4 1.3.1 1.5-.6l2.8-13.5c.2-.9-.6-1.5-1.3-1.5z" fill="currentColor"/>',
+  },
+  {
+    key: "reddit",
+    label: "Share on Reddit",
+    href: `https://www.reddit.com/submit?url=${encUrl}&title=${encTitle}`,
+    icon: '<circle cx="12" cy="13.5" r="6.5" fill="none" stroke="currentColor" stroke-width="1.7"/><circle cx="9.5" cy="13" r="1.1" fill="currentColor"/><circle cx="14.5" cy="13" r="1.1" fill="currentColor"/><path d="M9.5 16c1.4 1 3.6 1 5 0M12 7l1-3.5 3 .8" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="17.2" cy="4.6" r="1.2" fill="currentColor"/>',
+  },
+  {
+    key: "email",
+    label: "Share by email",
+    href: `mailto:?subject=${encTitle}&body=${encodeURIComponent(`${title}\n\n${url}`)}`,
+    icon: '<rect x="3.5" y="5.5" width="17" height="13" rx="2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M4 7l8 6 8-6" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>',
+  },
+]
+
+const linkIcon =
+  '<path d="M10 14a4 4 0 005.7 0l3-3a4 4 0 00-5.7-5.7l-1 1M14 10a4 4 0 00-5.7 0l-3 3a4 4 0 005.7 5.7l1-1" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>'
+const checkIcon =
+  '<path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>'
+const shareIcon =
+  '<circle cx="18" cy="5.5" r="2.5" fill="currentColor"/><circle cx="6" cy="12" r="2.5" fill="currentColor"/><circle cx="18" cy="18.5" r="2.5" fill="currentColor"/><path d="M8.2 10.8l7.6-4M8.2 13.2l7.6 4" stroke="currentColor" stroke-width="1.8"/>'
+---
+
+<div
+  class={`ushare ushare--${variant} ushare--open-${open}`}
+  data-share
+  data-share-url={url}
+  data-share-title={title}
+>
+  <div class="ushare__icons" data-share-icons>
+    {
+      links.map(l => (
+        <a
+          href={l.href}
+          class={`ushare__btn ushare__btn--${l.key}`}
+          target={l.key === "email" ? undefined : "_blank"}
+          rel="nofollow noopener noreferrer"
+          aria-label={l.label}
+          title={l.label}
+          data-share-popup={l.key === "email" ? undefined : "true"}
+        >
+          <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true" set:html={l.icon} />
+        </a>
+      ))
+    }
+    <button
+      type="button"
+      class="ushare__btn ushare__btn--copy"
+      aria-label="Copy link"
+      title="Copy link"
+      data-share-copy
+    >
+      <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true" set:html={linkIcon} />
+    </button>
+  </div>
+
+  <button
+    type="button"
+    class="ushare__toggle"
+    aria-expanded="false"
+    aria-label="Share this page"
+    title="Share this page"
+    data-share-toggle
+  >
+    <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true" set:html={shareIcon} />
+  </button>
+
+  <span class="ushare__toast" role="status" aria-live="polite" data-share-toast></span>
+
+  <template data-share-check set:html={checkIcon} />
+  <template data-share-link set:html={linkIcon} />
+</div>
+
+<style>
+  .ushare {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    padding: 3px;
+    border-radius: 999px;
+    z-index: 5;
+    transition: box-shadow 0.2s ease;
+  }
+  .ushare--light {
+    background: var(--white, #fff);
+    border: 1px solid var(--line, #e6e9f1);
+  }
+  .ushare--dark {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+  }
+
+  /* Icons open as an overlay next to the button so the pill's own size
+     never changes (growing in place made layouts re-wrap = vibration). */
+  .ushare__icons {
+    position: absolute;
+    top: 50%;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    max-width: 0;
+    overflow: hidden;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-50%);
+    border-radius: 999px;
+    transition:
+      max-width 0.25s ease,
+      opacity 0.2s ease,
+      visibility 0s linear 0.25s;
+  }
+  .ushare--light .ushare__icons {
+    background: var(--white, #fff);
+    border: 1px solid var(--line, #e6e9f1);
+    box-shadow: 0 8px 20px -10px rgba(15, 22, 40, 0.25);
+  }
+  .ushare--dark .ushare__icons {
+    background: #1b2650;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 8px 20px -10px rgba(0, 0, 0, 0.5);
+  }
+  .ushare--open-left .ushare__icons {
+    right: calc(100% - 2px);
+    padding: 3px 8px 3px 4px;
+  }
+  .ushare--open-right .ushare__icons {
+    left: calc(100% - 2px);
+    padding: 3px 4px 3px 8px;
+  }
+
+  .ushare.is-open .ushare__icons,
+  .ushare:focus-within .ushare__icons {
+    max-width: 360px;
+    opacity: 1;
+    visibility: visible;
+    transition:
+      max-width 0.25s ease,
+      opacity 0.2s ease,
+      visibility 0s;
+  }
+  @media (hover: hover) {
+    .ushare:hover .ushare__icons {
+      max-width: 360px;
+      opacity: 1;
+      visibility: visible;
+      transition:
+        max-width 0.25s ease,
+        opacity 0.2s ease,
+        visibility 0s;
+    }
+  }
+
+  .ushare__toggle {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition:
+      background 0.2s ease,
+      color 0.2s ease;
+  }
+  .ushare--light .ushare__toggle {
+    background: var(--ivory-2, #f3f5fb);
+    color: var(--emerald, #1f2f6b);
+  }
+  .ushare--dark .ushare__toggle {
+    background: rgba(255, 255, 255, 0.15);
+    color: #fff;
+  }
+  .ushare__toggle:hover,
+  .ushare.is-open .ushare__toggle {
+    background: var(--gold, #c8a24b);
+    color: #fff;
+  }
+
+  .ushare__btn {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    color: #fff !important;
+    text-decoration: none !important;
+    cursor: pointer;
+    transition: filter 0.2s ease;
+  }
+  .ushare__btn:hover {
+    filter: brightness(1.15);
+  }
+  .ushare__btn--x { background: #000; }
+  .ushare__btn--facebook { background: #1877f2; }
+  .ushare__btn--linkedin { background: #0a66c2; }
+  .ushare__btn--whatsapp { background: #25d366; }
+  .ushare__btn--telegram { background: #229ed9; }
+  .ushare__btn--reddit { background: #ff4500; }
+  .ushare__btn--email { background: #64748b; }
+  .ushare__btn--copy { background: var(--emerald, #1f2f6b); }
+  .ushare__btn--copy.is-copied { background: #16a34a; }
+
+  .ushare__toggle:focus-visible,
+  .ushare__btn:focus-visible {
+    outline: 2px solid var(--gold, #c8a24b);
+    outline-offset: 2px;
+  }
+
+  .ushare__toast {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    background: var(--ink, #131a2e);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 5px 10px;
+    border-radius: 6px;
+    white-space: nowrap;
+    opacity: 0;
+    transform: translateY(-4px);
+    pointer-events: none;
+    transition:
+      opacity 0.2s ease,
+      transform 0.2s ease;
+  }
+  .ushare--open-right .ushare__toast {
+    right: auto;
+    left: 0;
+  }
+  .ushare__toast.is-visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  .ushare__toast:empty {
+    display: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ushare__icons,
+    .ushare__btn {
+      transition: none;
+    }
+  }
+</style>
+
+<script>
+  function initSharePills() {
+    document.querySelectorAll<HTMLElement>("[data-share]").forEach(wrap => {
+      if (wrap.dataset.shareBound) return
+      wrap.dataset.shareBound = "true"
+
+      const toggle = wrap.querySelector<HTMLButtonElement>("[data-share-toggle]")
+      const copyBtn = wrap.querySelector<HTMLButtonElement>("[data-share-copy]")
+      const toast = wrap.querySelector<HTMLElement>("[data-share-toast]")
+      const checkTpl = wrap.querySelector<HTMLTemplateElement>("[data-share-check]")
+      const linkTpl = wrap.querySelector<HTMLTemplateElement>("[data-share-link]")
+      if (!toggle) return
+
+      const url = wrap.dataset.shareUrl || location.href
+      const title = wrap.dataset.shareTitle || document.title
+      const isTouch = window.matchMedia("(hover: none)").matches
+      let toastTimer: ReturnType<typeof setTimeout> | undefined
+
+      const setOpen = (open: boolean) => {
+        wrap.classList.toggle("is-open", open)
+        toggle.setAttribute("aria-expanded", open ? "true" : "false")
+      }
+
+      const showToast = (msg: string) => {
+        if (!toast) return
+        toast.textContent = msg
+        toast.classList.add("is-visible")
+        clearTimeout(toastTimer)
+        toastTimer = setTimeout(() => toast.classList.remove("is-visible"), 1800)
+      }
+
+      toggle.addEventListener("click", async e => {
+        e.stopPropagation()
+        // Phones/tablets: native share sheet (any installed app)
+        if (isTouch && navigator.share) {
+          try {
+            await navigator.share({ title, url })
+            return
+          } catch (err: any) {
+            if (err && err.name === "AbortError") return
+          }
+        }
+        setOpen(!wrap.classList.contains("is-open"))
+      })
+
+      // Social links open in a small centered popup (new tab as fallback)
+      wrap.querySelectorAll<HTMLAnchorElement>("[data-share-popup]").forEach(a => {
+        a.addEventListener("click", e => {
+          const w = 600
+          const h = 560
+          const left = window.screenX + (window.outerWidth - w) / 2
+          const top = window.screenY + (window.outerHeight - h) / 2
+          const popup = window.open(
+            a.href,
+            "share",
+            `width=${w},height=${h},left=${left},top=${top}`,
+          )
+          if (popup) {
+            popup.opener = null
+            e.preventDefault()
+          }
+        })
+      })
+
+      copyBtn?.addEventListener("click", async e => {
+        e.stopPropagation()
+        try {
+          await navigator.clipboard.writeText(url)
+        } catch {
+          // Fallback for older browsers / non-HTTPS
+          const ta = document.createElement("textarea")
+          ta.value = url
+          ta.style.position = "fixed"
+          ta.style.opacity = "0"
+          document.body.appendChild(ta)
+          ta.select()
+          document.execCommand("copy")
+          ta.remove()
+        }
+        const svg = copyBtn.querySelector("svg")
+        copyBtn.classList.add("is-copied")
+        if (svg && checkTpl) svg.innerHTML = checkTpl.innerHTML
+        showToast("Link copied")
+        setTimeout(() => {
+          copyBtn.classList.remove("is-copied")
+          if (svg && linkTpl) svg.innerHTML = linkTpl.innerHTML
+        }, 1800)
+      })
+
+      document.addEventListener("click", e => {
+        if (!wrap.contains(e.target as Node)) setOpen(false)
+      })
+      document.addEventListener("keydown", e => {
+        if (e.key === "Escape") setOpen(false)
+      })
+    })
+  }
+
+  initSharePills()
+  document.addEventListener("astro:page-load", initSharePills)
+</script>
