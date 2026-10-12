@@ -229,6 +229,25 @@ const year = new Date().getFullYear()
       </nav>
     </div>
 
+    <!-- Disclaimer + Responsible Gambling notices -->
+    <div class="foot__notices">
+      <p class="foot__notice">
+        <strong>DISCLAIMER:</strong> Bonus terms change often, so read the full
+        terms and conditions before you claim any offer. US Player Check takes no
+        responsibility for incorrect or outdated bonus, offer, or promotion
+        details.
+      </p>
+      <p class="foot__notice">
+        <strong>RESPONSIBLE GAMBLING:</strong> Gambling is entertainment, not a
+        way to make money. Set a budget and a time limit before you play, and use
+        deposit limits, session limits, or self-exclusion where the casino offers
+        them. If gambling stops being fun, call the National Problem Gambling
+        Helpline at
+        <a href="tel:18005224700">1-800-GAMBLER (1-800-522-4700)</a>. Players
+        must meet the legal gambling age in their state.
+      </p>
+    </div>
+
     <div class="foot__legal">
       <p>
         © {year} US Player Check. US Player Check is an independent comparison service
@@ -533,12 +552,41 @@ const year = new Date().getFullYear()
     text-underline-offset: 2px;
   }
 
+  /* Divider line now sits under the notices (moved from .foot__top) */
   .foot__top {
     display: grid;
     grid-template-columns: 1.2fr 2fr;
     gap: clamp(32px, 5vw, 72px);
-    padding-bottom: 44px;
+    padding-bottom: 32px;
+  }
+
+  /* ---- Disclaimer + Responsible Gambling notices ---- */
+  .foot__notices {
+    display: grid;
+    gap: 14px;
+    padding-bottom: 32px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  }
+  .foot__notice {
+    margin: 0;
+    font-size: 13.5px;
+    line-height: 1.65;
+    color: rgba(255, 255, 255, 0.72);
+  }
+  .foot__notice strong {
+    color: #fff;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+  }
+  .foot__notice a {
+    color: var(--gold-2);
+    font-weight: 600;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    white-space: nowrap;
+  }
+  .foot__notice a:hover {
+    color: #fff;
   }
 
   .foot .brand {
@@ -663,6 +711,9 @@ const year = new Date().getFullYear()
       flex-direction: column;
       align-items: flex-start;
       gap: 12px;
+    }
+    .foot__notice a {
+      white-space: normal;
     }
   }
 </style>
