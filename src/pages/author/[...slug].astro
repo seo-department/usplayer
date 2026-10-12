@@ -3,16 +3,19 @@ import Layout from '../../layouts/Layout.astro';
 import Nav from '../../components/Nav.astro';
 import Footer from '../../components/Footer.astro';
 import Breadcrumbs from '../../components/Breadcrumbs.astro';
+import OtherAuthors from '../../components/OtherAuthors.astro';
 
 const STAGING = 'https://cms.usplayercheck.com';
 
 export async function getStaticPaths() {
-  const endpoint = import.meta.env.WP_GRAPHQL_URL;
-  if (!endpoint) { console.warn('[wp] WP_GRAPHQL_URL is not set'); return []; }
+  const endpoint = import.meta.env.WP_GRAPHQL_URL || 'https://cms.usplayercheck.com/graphql';
 
   // Only strip the domain when the URL actually lives on our WP/Cloudways host.
   // External hosts (e.g. Gravatar) are left fully intact since we don't proxy those.
-  const WP_HOSTS = ['cms.usplayercheck.com'];
+  const WP_HOSTS = [
+    'cms.usplayercheck.com',
+    'wordpress-1301750-6506622.cloudwaysapps.com',
+  ];
   const mediaUrl = (u) => {
     if (!u) return u;
     try {
@@ -27,14 +30,60 @@ export async function getStaticPaths() {
   };
 
   // Manual avatar overrides for authors whose real photo lives in wp-content
-  // rather than Gravatar. Keyed by author slug (must match the slug this page
-  // resolves to — double check against the `clean()` output below).
+  // rather than Gravatar. Keyed by author slug OR display name, so both
+  // /author/bonnie/ and /author/bonnie-evans/ style slugs are covered.
   const AVATAR_OVERRIDES = {
+    'bonnie': '/wp-content/uploads/2024/08/bonnie-evans.png',
     'bonnie-evans': '/wp-content/uploads/2024/08/bonnie-evans.png',
+    'evans-bonnie': '/wp-content/uploads/2024/08/bonnie-evans.png',
+    'Evans Bonnie': '/wp-content/uploads/2024/08/bonnie-evans.png',
+    'Bonnie': '/wp-content/uploads/2024/08/bonnie-evans.png',
+
+    'charlotte': '/wp-content/uploads/2025/09/charlotte-watts.png',
     'charlotte-watts': '/wp-content/uploads/2025/09/charlotte-watts.png',
+    'Charlotte Watts': '/wp-content/uploads/2025/09/charlotte-watts.png',
+    'Charlotte': '/wp-content/uploads/2025/09/charlotte-watts.png',
+
+    'jordie': '/wp-content/uploads/2024/08/Jordie-Hillcreek.png',
     'jordie-hillcreek': '/wp-content/uploads/2024/08/Jordie-Hillcreek.png',
+    'Jordie Hillcreek': '/wp-content/uploads/2024/08/Jordie-Hillcreek.png',
+    'Jordie': '/wp-content/uploads/2024/08/Jordie-Hillcreek.png',
+
+    'margaret': '/wp-content/uploads/2024/07/Margaret-Cooper-us.webp',
     'margaret-cooper': '/wp-content/uploads/2024/07/Margaret-Cooper-us.webp',
+    'Margaret Cooper': '/wp-content/uploads/2024/07/Margaret-Cooper-us.webp',
+    'Margaret': '/wp-content/uploads/2024/07/Margaret-Cooper-us.webp',
   };
+
+  // Role shown under each name in the "Other Authors" carousel.
+  // Keyed by slug or display name; anyone not listed gets DEFAULT_ROLE.
+  const AUTHOR_ROLES = {
+    'bonnie': 'Casino Researcher',
+    'Evans Bonnie': 'Casino Researcher',
+    'Bonnie': 'Casino Researcher',
+    'charlotte': 'Fact-Checker',
+    'Charlotte Watts': 'Fact-Checker',
+    'Charlotte': 'Fact-Checker',
+    'jordie': 'Fact-Checker',
+    'Jordie Hillcreek': 'Fact-Checker',
+    'Jordie': 'Fact-Checker',
+    'margaret': 'Senior Fact-Checker',
+    'Margaret Cooper': 'Senior Fact-Checker',
+    'Margaret': 'Senior Fact-Checker',
+    'Kayla McBrien': 'Senior Casino Analyst',
+  };
+  const DEFAULT_ROLE = 'Casino Writer';
+
+  // Accounts that should never appear in the carousel (admins, test users…)
+  const EXCLUDE_FROM_CAROUSEL = ['admin', 'administrator', 'editor'];
+
+  // Upgrade Gravatar URLs to a larger size so the tall cards stay sharp;
+  // swap the grey "mystery man" default for a generated initials avatar.
+  const isMysteryMan = (u) => !u || /mystery-man|[?&]d=mm\b/i.test(u);
+  const bigAvatar = (u) =>
+    /gravatar\.com\/avatar/i.test(u) ? u.replace(/([?&])s=\d+/, '$1s=400') : u;
+  const initialsAvatar = (name) =>
+    `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&size=400&background=1a233a&color=fff&bold=true`;
 
   async function fetchAuthors() {
     const users = [];
@@ -81,6 +130,31 @@ export async function getStaticPaths() {
   const clean = (uri, slug) =>
     (uri || `/author/${slug}/`).replace(/^\/+|\/+$/g, '').replace(/^author\//, '');
 
+  const resolveAvatar = (slug, name, raw) => {
+    const override = AVATAR_OVERRIDES[slug] ?? AVATAR_OVERRIDES[name];
+    if (override) return override;
+    if (isMysteryMan(raw)) return null;
+    return mediaUrl(raw);
+  };
+
+  // Build the shared "team" list once, used by every author page's carousel
+  const teamAuthors = users
+    .map((u) => {
+      const slug = clean(u.uri, u.slug);
+      if (!slug || !u.name) return null;
+      if (EXCLUDE_FROM_CAROUSEL.includes(slug.toLowerCase())) return null;
+      if (EXCLUDE_FROM_CAROUSEL.includes(u.name.toLowerCase())) return null;
+      const avatar = resolveAvatar(slug, u.name, u.avatar?.url);
+      return {
+        name: u.name,
+        slug,
+        href: `/author/${slug}/`,
+        avatar: avatar ? bigAvatar(avatar) : initialsAvatar(u.name),
+        role: AUTHOR_ROLES[slug] ?? AUTHOR_ROLES[u.name] ?? DEFAULT_ROLE,
+      };
+    })
+    .filter(Boolean);
+
   const paths = [];
   for (const u of users) {
     const slug = clean(u.uri, u.slug);
@@ -96,16 +170,18 @@ export async function getStaticPaths() {
       params: { slug },
       props: {
         name: u.name,
+        slug,
         bio: u.description ?? '',
-        avatar: AVATAR_OVERRIDES[slug] ?? mediaUrl(u.avatar?.url ?? null),
+        avatar: resolveAvatar(slug, u.name, u.avatar?.url) ?? initialsAvatar(u.name),
         posts,
+        teamAuthors,
       },
     });
   }
   return paths;
 }
 
-const { name, bio, avatar, posts } = Astro.props;
+const { name, slug, bio, avatar, posts, teamAuthors = [] } = Astro.props;
 const canonical = new URL(Astro.url.pathname, Astro.site).toString();
 
 const schema = {
@@ -161,6 +237,9 @@ const schema = {
       </div>
     )}
   </section>
+
+  {/* OTHER AUTHORS — every author except the one on this page */}
+  <OtherAuthors authors={teamAuthors} excludeSlug={slug} />
 
   <Footer />
 </Layout>

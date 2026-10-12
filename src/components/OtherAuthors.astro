@@ -1,0 +1,263 @@
+---
+// "Other Authors" photo-card carousel shown at the bottom of every
+// /author/<slug>/ page. The current author is filtered out via excludeSlug.
+export interface TeamAuthor {
+  name: string
+  slug: string
+  href: string
+  avatar: string
+  role: string
+}
+
+interface Props {
+  authors: TeamAuthor[]
+  excludeSlug?: string
+  title?: string
+}
+
+const { authors = [], excludeSlug, title = "Other Authors" } = Astro.props
+const list = authors.filter(a => a.slug !== excludeSlug)
+const uid = `oa-${Math.random().toString(36).slice(2, 8)}`
+---
+
+{
+  list.length > 0 && (
+    <section class="oauth" aria-labelledby={`${uid}-title`} data-oauth>
+      <div class="wrap">
+        <div class="oauth__head">
+          <h2 class="oauth__title" id={`${uid}-title`}>
+            {title}
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+              <path
+                d="M9 6l6 6-6 6"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.4"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+          </h2>
+          <span class="oauth__line" aria-hidden="true" />
+          <div class="oauth__nav">
+            <button
+              type="button"
+              class="oauth__arrow"
+              data-oauth-prev
+              aria-label="Previous authors"
+            >
+              <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+                <path d="M15 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              class="oauth__arrow"
+              data-oauth-next
+              aria-label="Next authors"
+            >
+              <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+                <path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="oauth__track" data-oauth-track>
+          {list.map(a => (
+            <a class="oauth__card" href={a.href}>
+              <div class="oauth__photo">
+                <img
+                  src={a.avatar}
+                  alt={a.name}
+                  loading="lazy"
+                  referrerpolicy="no-referrer"
+                />
+              </div>
+              <div class="oauth__info">
+                <span class="oauth__name">{a.name}</span>
+                <span class="oauth__role">{a.role}</span>
+              </div>
+            </a>
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+<style>
+  .oauth {
+    padding-block: clamp(36px, 5vw, 56px);
+    border-top: 1px solid var(--line, #e6e9f1);
+  }
+  .oauth__head {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 22px;
+  }
+  .oauth__title {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: var(--ink, #131a2e);
+    white-space: nowrap;
+  }
+  .oauth__line {
+    flex: 1;
+    height: 1px;
+    background: var(--line, #e6e9f1);
+  }
+  .oauth__nav {
+    display: flex;
+    gap: 8px;
+  }
+  .oauth__arrow {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: 1px solid var(--line, #e6e9f1);
+    background: var(--white, #fff);
+    color: var(--ink, #131a2e);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease, opacity 0.15s ease;
+  }
+  .oauth__arrow:hover:not(:disabled) {
+    background: var(--emerald, #1f2f6b);
+    color: #fff;
+  }
+  .oauth__arrow:disabled {
+    opacity: 0.35;
+    cursor: default;
+  }
+
+  .oauth__track {
+    display: flex;
+    gap: 22px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scroll-behavior: smooth;
+    padding-bottom: 4px;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .oauth__track::-webkit-scrollbar {
+    display: none;
+  }
+
+  .oauth__card {
+    flex: 0 0 220px;
+    scroll-snap-align: start;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #05070d;
+    text-decoration: none;
+    display: flex;
+    flex-direction: column;
+    box-shadow: var(--shadow-sm, 0 1px 3px rgba(15, 22, 40, 0.08));
+    transition: transform 0.18s ease, box-shadow 0.2s ease;
+  }
+  .oauth__card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-md, 0 10px 24px -10px rgba(15, 22, 40, 0.4));
+  }
+  .oauth__photo {
+    aspect-ratio: 1 / 1;
+    background: #1a233a;
+    overflow: hidden;
+  }
+  .oauth__photo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center top;
+    display: block;
+    transition: transform 0.3s ease;
+  }
+  .oauth__card:hover .oauth__photo img {
+    transform: scale(1.04);
+  }
+  .oauth__info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 54px 22px 26px;
+    background: linear-gradient(180deg, #1c2740 0%, #05070d 100%);
+  }
+  .oauth__name {
+    font-size: 18px;
+    font-weight: 800;
+    color: #fff;
+    letter-spacing: -0.01em;
+  }
+  .oauth__role {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.82);
+  }
+
+  @media (max-width: 600px) {
+    .oauth__card {
+      flex-basis: 70%;
+    }
+    .oauth__nav {
+      display: none;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .oauth__track {
+      scroll-behavior: auto;
+    }
+    .oauth__card,
+    .oauth__photo img {
+      transition: none;
+    }
+  }
+</style>
+
+<script>
+  function initOtherAuthors() {
+    document.querySelectorAll<HTMLElement>("[data-oauth]").forEach(section => {
+      if (section.dataset.oauthBound) return
+      section.dataset.oauthBound = "true"
+
+      const track = section.querySelector<HTMLElement>("[data-oauth-track]")
+      const prev = section.querySelector<HTMLButtonElement>("[data-oauth-prev]")
+      const next = section.querySelector<HTMLButtonElement>("[data-oauth-next]")
+      if (!track) return
+
+      const step = () => {
+        const card = track.querySelector<HTMLElement>(".oauth__card")
+        return card ? card.getBoundingClientRect().width + 22 : 240
+      }
+
+      const update = () => {
+        const max = track.scrollWidth - track.clientWidth - 2
+        if (prev) prev.disabled = track.scrollLeft <= 2
+        if (next) next.disabled = track.scrollLeft >= max
+      }
+
+      prev?.addEventListener("click", () =>
+        track.scrollBy({ left: -step(), behavior: "smooth" }),
+      )
+      next?.addEventListener("click", () =>
+        track.scrollBy({ left: step(), behavior: "smooth" }),
+      )
+      track.addEventListener("scroll", update, { passive: true })
+      window.addEventListener("resize", update)
+      update()
+    })
+  }
+
+  initOtherAuthors()
+  document.addEventListener("astro:page-load", initOtherAuthors)
+</script>
