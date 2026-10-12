@@ -1343,7 +1343,9 @@ p.editorial__text {
   }
   .ushare template { display: none !important; }
 
-  
+  .ushare.ushare--open-left.ushare--light.ushare--inrow {
+    margin-top: -21px;
+}
 
 /* ================================
    Mobile
