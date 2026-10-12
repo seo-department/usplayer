@@ -11,9 +11,12 @@ interface Props {
   variant?: "light" | "dark"
   /** Which side the icons slide out to */
   open?: "left" | "right"
+  /** If true, the page script moves this pill into the WP author row
+      ("Last Updated · Written By · Fact checked by") when one exists */
+  movable?: boolean
 }
 
-const { url, title, variant = "light", open = "left" } = Astro.props
+const { url, title, variant = "light", open = "left", movable = false } = Astro.props
 
 const encUrl = encodeURIComponent(url)
 const encTitle = encodeURIComponent(title)
@@ -76,6 +79,7 @@ const shareIcon =
   data-share
   data-share-url={url}
   data-share-title={title}
+  data-share-move={movable ? "true" : undefined}
 >
   <div class="ushare__icons" data-share-icons>
     {
@@ -121,7 +125,7 @@ const shareIcon =
   <template data-share-link set:html={linkIcon} />
 </div>
 
-<style>
+<style is:global>
   .ushare {
     position: relative;
     display: inline-flex;
@@ -289,6 +293,51 @@ const shareIcon =
   }
   .ushare__toast:empty {
     display: none;
+  }
+
+  /* Hard resets: protect against theme/prose rules for a, button, svg, img */
+  .ushare,
+  .ushare * {
+    box-sizing: border-box;
+  }
+  .ushare svg {
+    display: block;
+    width: 15px;
+    height: 15px;
+    margin: 0 !important;
+    flex: none;
+  }
+  .ushare__icons {
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+  }
+  .ushare__btn,
+  .ushare__toggle {
+    padding: 0 !important;
+    margin: 0 !important;
+    line-height: 1 !important;
+    box-shadow: none;
+  }
+
+  /* When moved into the WP author row: sit at the far right of the row */
+  .ushare.ushare--inrow {
+    margin-left: auto;
+    align-self: center;
+  }
+  @media (max-width: 760px) {
+    /* Row wraps on mobile: pill drops to its own line, icons open right */
+    .ushare.ushare--inrow {
+      margin-left: 0;
+    }
+    .ushare.ushare--inrow .ushare__icons {
+      right: auto;
+      left: calc(100% - 2px);
+      padding: 3px 4px 3px 8px;
+    }
+    .ushare.ushare--inrow .ushare__toast {
+      right: auto;
+      left: 0;
+    }
   }
 
   @media (prefers-reduced-motion: reduce) {

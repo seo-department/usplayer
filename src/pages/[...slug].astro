@@ -772,7 +772,7 @@ const schemaGraph = {
               </a>
               <span class="rband__note">New players only · 18+</span>
               <div class="rband__share">
-                <SharePage url={shareUrl} title={shareTitle} variant="light" open="left" />
+                <SharePage url={shareUrl} title={shareTitle} variant="light" open="left" movable />
               </div>
             </div>
           </div>
@@ -892,7 +892,7 @@ const schemaGraph = {
             </div>
 
             <div class="phero__share">
-              <SharePage url={shareUrl} title={shareTitle} variant="dark" open="right" />
+              <SharePage url={shareUrl} title={shareTitle} variant="dark" open="right" movable />
             </div>
           </div>
         </header>
@@ -990,7 +990,7 @@ const schemaGraph = {
         <header class="ghero">
           <div class="wrap ghero__row">
             <h1 class="ghero__title">{title}</h1>
-            <SharePage url={shareUrl} title={shareTitle} variant="light" open="left" />
+            <SharePage url={shareUrl} title={shareTitle} variant="dark" open="left" movable />
           </div>
         </header>
 
@@ -2319,8 +2319,48 @@ const schemaGraph = {
     document.getElementById("editorial-fallback")?.remove()
   }
 
+  // Move the share pill into the WP author row ("Last Updated · Written By ·
+  // Fact checked by") so it sits side by side with the authors. If the page
+  // has no author row, the pill stays where it was rendered in the hero.
+  function placeShare() {
+    const pill = document.querySelector<HTMLElement>("[data-share-move]")
+    const prose = document.querySelector(".prose")
+    if (!pill || !prose || pill.dataset.placed === "true") return
+
+    // Deepest element whose text contains both "written by" and
+    // "fact checked by" = the row that holds the author items
+    let row: HTMLElement | null = null
+    prose.querySelectorAll<HTMLElement>("*").forEach(el => {
+      const t = (el.textContent || "").toLowerCase()
+      if (t.includes("written by") && t.includes("fact checked by")) row = el
+    })
+    if (!row) return
+
+    const display = getComputedStyle(row).display
+    if (!/flex|grid/.test(display)) {
+      row.style.display = "flex"
+      row.style.flexWrap = "wrap"
+      row.style.alignItems = "center"
+      row.style.gap = row.style.gap || "12px"
+    }
+
+    pill.classList.remove("ushare--dark")
+    pill.classList.add("ushare--light", "ushare--inrow", "ushare--open-left")
+    pill.classList.remove("ushare--open-right")
+    row.appendChild(pill)
+    pill.dataset.placed = "true"
+
+    // Hide the now-empty hero holder (posts / reviews wrap the pill)
+    document
+      .querySelectorAll(".phero__share, .rband__share")
+      .forEach(el => {
+        if (!el.querySelector(".ushare")) (el as HTMLElement).style.display = "none"
+      })
+  }
+
   function initAll() {
     initTocToggles()
+    placeShare()
     placeEditorial()
   }
 
