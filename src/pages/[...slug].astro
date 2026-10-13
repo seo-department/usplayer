@@ -529,7 +529,14 @@ const toSidebarUrl = (raw: string) => {
   return rel !== url ? rel || "/" : url
 }
 
-let sidebarLinks: { title: string; items: SidebarItem[] } | null = null
+type SidebarPosition = "top" | "after_mission" | "after_toc"
+const SIDEBAR_POSITIONS: SidebarPosition[] = ["top", "after_mission", "after_toc"]
+
+let sidebarLinks: {
+  title: string
+  items: SidebarItem[]
+  position: SidebarPosition
+} | null = null
 try {
   const parsed = node.cusSidebar ? JSON.parse(node.cusSidebar) : null
   if (parsed && Array.isArray(parsed.items)) {
@@ -550,12 +557,23 @@ try {
       .filter((it: SidebarItem) => it.text && (it.type === "heading" || it.url))
 
     if (items.some(it => it.type === "link")) {
-      sidebarLinks = { title: String(parsed.title || "").trim(), items }
+      const pos = String(parsed.position || "").trim() as SidebarPosition
+      sidebarLinks = {
+        title: String(parsed.title || "").trim(),
+        items,
+        // "Position" dropdown in the WP Sidebar Links box (default: below TOC)
+        position: SIDEBAR_POSITIONS.includes(pos) ? pos : "after_toc",
+      }
     }
   }
 } catch (e) {
   console.warn("[sidebar-links] could not parse cusSidebar for", node.uri)
 }
+
+// Shorthand flags for where the Sidebar Links box goes
+const sbTop = sidebarLinks?.position === "top"
+const sbAfterMission = sidebarLinks?.position === "after_mission"
+const sbAfterToc = sidebarLinks?.position === "after_toc"
 
 const siteUrl = SITE
 
@@ -800,6 +818,11 @@ const schemaGraph = {
         <div class="wrap rentry__grid">
           <div class="prose" id="review-body" set:html={contentHtml} />
           <aside class="rsidebar" aria-label="Quick summary">
+            {/* Sidebar Links: "Top of sidebar" = above the verdict card */}
+            {sidebarLinks && sbTop && (
+              <SidebarLinks title={sidebarLinks.title} items={sidebarLinks.items} />
+            )}
+
             <div class="rsidebar__card">
               {heroImage && (
                 <img
@@ -843,16 +866,17 @@ const schemaGraph = {
               </span>
             </div>
 
-            {/* Sidebar Links box (set per review in the WP editor) */}
-            {sidebarLinks && (
-              <SidebarLinks
-                title={sidebarLinks.title}
-                items={sidebarLinks.items}
-              />
-            )}
-
-            <!-- Sticky TOC under the verdict card (desktop only) -->
-            <ArticleSidebar tocItems={tocItems} showMission={false} />
+            <!-- Sticky TOC under the verdict card (desktop only).
+                 Reviews have no Mission card, so "Below Mission Statement"
+                 lands directly under the verdict card, above the TOC. -->
+            <ArticleSidebar tocItems={tocItems} showMission={false}>
+              {sidebarLinks && sbAfterMission && (
+                <SidebarLinks slot="after-mission" title={sidebarLinks.title} items={sidebarLinks.items} />
+              )}
+              {sidebarLinks && sbAfterToc && (
+                <SidebarLinks slot="after-toc" title={sidebarLinks.title} items={sidebarLinks.items} />
+              )}
+            </ArticleSidebar>
           </aside>
         </div>
 
@@ -931,13 +955,17 @@ const schemaGraph = {
         <div class="wrap agrid">
           <div class="prose" set:html={contentHtml} />
           <div class="sidecol">
-            {sidebarLinks && (
-              <SidebarLinks
-                title={sidebarLinks.title}
-                items={sidebarLinks.items}
-              />
-            )}
-            <ArticleSidebar tocItems={tocItems} />
+            <ArticleSidebar tocItems={tocItems}>
+              {sidebarLinks && sbTop && (
+                <SidebarLinks slot="top" title={sidebarLinks.title} items={sidebarLinks.items} />
+              )}
+              {sidebarLinks && sbAfterMission && (
+                <SidebarLinks slot="after-mission" title={sidebarLinks.title} items={sidebarLinks.items} />
+              )}
+              {sidebarLinks && sbAfterToc && (
+                <SidebarLinks slot="after-toc" title={sidebarLinks.title} items={sidebarLinks.items} />
+              )}
+            </ArticleSidebar>
           </div>
         </div>
 
@@ -1015,13 +1043,17 @@ const schemaGraph = {
         <div class="wrap agrid">
           <div class="prose" set:html={contentHtml} />
           <div class="sidecol">
-            {sidebarLinks && (
-              <SidebarLinks
-                title={sidebarLinks.title}
-                items={sidebarLinks.items}
-              />
-            )}
-            <ArticleSidebar tocItems={tocItems} />
+            <ArticleSidebar tocItems={tocItems}>
+              {sidebarLinks && sbTop && (
+                <SidebarLinks slot="top" title={sidebarLinks.title} items={sidebarLinks.items} />
+              )}
+              {sidebarLinks && sbAfterMission && (
+                <SidebarLinks slot="after-mission" title={sidebarLinks.title} items={sidebarLinks.items} />
+              )}
+              {sidebarLinks && sbAfterToc && (
+                <SidebarLinks slot="after-toc" title={sidebarLinks.title} items={sidebarLinks.items} />
+              )}
+            </ArticleSidebar>
           </div>
         </div>
       </article>
@@ -1398,9 +1430,9 @@ const schemaGraph = {
     max-width: none;
   }
 
-  /* Sidebar column: Sidebar Links box on top, ArticleSidebar below.
-     Stretches the full article height so the sticky TOC inside
-     ArticleSidebar keeps sticking all the way down. */
+  /* Sidebar column: holds ArticleSidebar (which places the Sidebar Links
+     box at the position chosen in WP). Stretches the full article height
+     so the sticky TOC keeps sticking all the way down. */
   .sidecol {
     display: flex;
     flex-direction: column;

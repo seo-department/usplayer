@@ -1,13 +1,24 @@
 ---
 // src/components/ArticleSidebar.astro
+//
+// Named slots let the page drop the Sidebar Links box into the position
+// chosen in WordPress ("Position" dropdown in the Sidebar Links meta box):
+//   slot="top"            → top of sidebar (above Mission Statement)
+//   slot="after-mission"  → below Mission Statement (above Table of Contents)
+//   slot="after-toc"      → below Table of Contents
 interface Props {
   tocItems?: { text: string; slug: string }[]
   showMission?: boolean
 }
 const { tocItems = [], showMission = true } = Astro.props
+
+const hasToc = tocItems.length > 0
+const hasAfterToc = Astro.slots.has("after-toc")
 ---
 
 <aside class="asb" aria-label="Sidebar">
+  <slot name="top" />
+
   {showMission && (
     <section class="asb-card asb-mission">
       <b class="asb-mission__head">
@@ -30,20 +41,29 @@ const { tocItems = [], showMission = true } = Astro.props
     </section>
   )}
 
-  {tocItems.length > 0 && (
-    <nav class="asb-card asb-toc" aria-label="Table of contents">
-      <b class="asb-toc__head">
-        <span class="asb-toc__flag" aria-hidden="true"></span>
-        Table of contents
-      </b>
-      <ul class="asb-toc__list">
-        {tocItems.map(item => (
-          <li>
-            <a href={`#${item.slug}`} data-toc-link={item.slug}>{item.text}</a>
-          </li>
-        ))}
-      </ul>
-    </nav>
+  <slot name="after-mission" />
+
+  {/* TOC + "below TOC" box share one sticky wrapper, so the box travels
+      with the TOC instead of being overlapped by it while scrolling */}
+  {(hasToc || hasAfterToc) && (
+    <div class="asb-sticky">
+      {hasToc && (
+        <nav class="asb-card asb-toc" aria-label="Table of contents">
+          <b class="asb-toc__head">
+            <span class="asb-toc__flag" aria-hidden="true"></span>
+            Table of contents
+          </b>
+          <ul class="asb-toc__list">
+            {tocItems.map(item => (
+              <li>
+                <a href={`#${item.slug}`} data-toc-link={item.slug}>{item.text}</a>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      )}
+      <slot name="after-toc" />
+    </div>
   )}
 </aside>
 
@@ -52,7 +72,7 @@ const { tocItems = [], showMission = true } = Astro.props
     display: flex;
     flex-direction: column;
     gap: 20px;
-    align-self: stretch; /* lets the TOC card stick for the full article height */
+    align-self: stretch; /* lets the sticky block stick for the full article height */
   }
   .asb-card {
     background: var(--white);
@@ -135,14 +155,21 @@ const { tocItems = [], showMission = true } = Astro.props
     color: #fff;
   }
 
-  /* ---- Sticky TOC ---- */
-  .asb-toc {
+  /* ---- Sticky block: TOC (+ Sidebar Links when "Below TOC") ---- */
+  .asb-sticky {
     position: sticky;
-    top: 122px; 
-    max-height: calc(100vh - 104px);
+    top: 122px;
+    max-height: calc(100vh - 140px);
     overflow-y: auto;
-    padding: 18px;
     overscroll-behavior: contain;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    scrollbar-width: thin;
+  }
+  .asb-toc {
+    padding: 18px;
+    flex: none;
   }
   .asb-toc__head {
     display: flex;
@@ -192,10 +219,17 @@ const { tocItems = [], showMission = true } = Astro.props
     font-size: 14.5px;
   }
 
-  /* Mobile: the collapsible TOC above the content takes over */
+  /* Mobile: the collapsible TOC above the content takes over.
+     The sticky block becomes a normal block so a "Below TOC"
+     Sidebar Links box still shows. */
   @media (max-width: 960px) {
     .asb-toc {
       display: none;
+    }
+    .asb-sticky {
+      position: static;
+      max-height: none;
+      overflow: visible;
     }
   }
 </style>
@@ -213,7 +247,8 @@ const { tocItems = [], showMission = true } = Astro.props
       .filter((h): h is HTMLElement => !!h)
     if (!heads.length) return
 
-    const box = document.querySelector<HTMLElement>(".asb-toc")
+    // The sticky wrapper is what scrolls now (it holds the TOC + optional box)
+    const box = document.querySelector<HTMLElement>(".asb-sticky")
     const OFFSET = 120
     let ticking = false
     let currentId = ""
@@ -232,10 +267,11 @@ const { tocItems = [], showMission = true } = Astro.props
         a.classList.toggle("is-active", on)
         if (on) {
           a.setAttribute("aria-current", "true")
-          // keep the active item visible if the TOC itself scrolls
+          // keep the active item visible if the sticky block itself scrolls
           if (box && box.scrollHeight > box.clientHeight) {
-            const top = a.offsetTop - box.clientHeight / 3
-            box.scrollTo({ top, behavior: "smooth" })
+            const linkTop =
+              a.getBoundingClientRect().top - box.getBoundingClientRect().top + box.scrollTop
+            box.scrollTo({ top: linkTop - box.clientHeight / 3, behavior: "smooth" })
           }
         } else {
           a.removeAttribute("aria-current")
