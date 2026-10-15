@@ -1503,6 +1503,12 @@ p.editorial__text {
   }
 
 
+  .wrap.agrid .aligncenter 
+  {
+    display: none;
+  }
+
+
 /* Stacked on mobile */
 @media (max-width: 719px) {
   .content-wide--single-pages__post-author .author_name_updated_date {
