@@ -884,9 +884,10 @@ const schemaGraph = {
 
     ) : isPost ? (
       <article class="entry">
-        <header class="phero">
+        <header class={heroImage ? "phero phero--media" : "phero"}>
           <div class="phero__glow" aria-hidden="true" />
           <div class="wrap phero__inner">
+            <div class="phero__text">
             {cat && <span class="phero__cat">{cat}</span>}
             <h1 class="phero__title">{title}</h1>
 
@@ -918,6 +919,23 @@ const schemaGraph = {
             <div class="phero__share">
               <SharePage url={shareUrl} title={shareTitle} variant="dark" open="right" movable />
             </div>
+            </div>
+            {/* ↑ closes .phero__text */}
+
+            {/* Featured image on the right of the hero (posts only) */}
+            {heroImage && (
+              <div class="phero__media">
+                <img
+                  src={heroImage}
+                  alt={heroAlt}
+                  width="1200"
+                  height="630"
+                  loading="eager"
+                  fetchpriority="high"
+                  decoding="async"
+                />
+              </div>
+            )}
           </div>
         </header>
 
@@ -936,19 +954,6 @@ const schemaGraph = {
                 ))}
               </ul>
             </nav>
-          </div>
-        )}
-
-        {heroImage && (
-          <div class="wrap">
-            <img
-              class="entry__cover"
-              src={heroImage}
-              alt={heroAlt}
-              width="1200"
-              height="630"
-              loading="lazy"
-            />
           </div>
         )}
 
@@ -1233,6 +1238,49 @@ const schemaGraph = {
   .byline__meta {
     font-size: 13px;
     color: rgba(255, 255, 255, 0.72);
+  }
+
+  /* ---- Post hero with featured image (two columns) ---- */
+  .phero__text {
+    min-width: 0;
+  }
+  .phero--media {
+    padding: clamp(36px, 5vw, 64px) 0;
+  }
+  .phero--media .phero__inner {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: clamp(28px, 4vw, 56px);
+    align-items: center;
+    text-align: left;
+  }
+  .phero--media .phero__title {
+    font-size: clamp(28px, 3.4vw, 44px);
+    margin-left: 0;
+    margin-right: 0;
+  }
+  .phero--media .phero__share {
+    justify-content: flex-start;
+  }
+  .phero__media img {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1200 / 630;
+    object-fit: cover;
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    box-shadow: 0 24px 60px -24px rgba(5, 10, 25, 0.7);
+    background: rgba(255, 255, 255, 0.06);
+  }
+  @media (max-width: 900px) {
+    .phero--media .phero__inner {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 24px;
+    }
+    .phero__media img {
+      border-radius: 12px;
+    }
   }
 
   .entry__cover {
